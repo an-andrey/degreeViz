@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Course Prerequisite Visualizer</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+</head>
+<body>
+    <div class="page-container">
+        <header class="clickable-header"> 
+            <h1 id="homeLink" data-url="{{ url_for('scrape_route') }}">DegreeViz</h1>
+        </header>
+
+        <div class="custom-manipulation-buttons">
+            <button id="exportGraphBtn">Export Graph (JSON)</button>
+            <button id="addNodeBtn">Add Course</button>
+            <button id="addEdgeBtn">Add Prerequisite</button>
+            <button id="editModeBtn">Edit Selected</button>
+            <button id="deleteSelectedBtn">Delete Selected</button>
+            <button id="disableEditModeBtn" style="display:none;">Done Editing</button>
+        </div>
+
+        <div id="courseNetwork"></div>    
+    </div>
+
+    <script type="text/javascript">
+        // Pass Flask data to JavaScript global variables
+        const prereqsData = {{ prereqs|tojson }};
+        const detailsData = {{ details|tojson }};
+    </script>
+    <script type="text/javascript" src="{{ url_for('static', filename='js/scripts.js') }}"></script>
+</body>
+</html>
