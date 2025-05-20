@@ -452,7 +452,7 @@ def scrape_route():
         infos = scraper.scrape_data(url)
 
         gemini_data = infos[2] # dictionary of minimial info needed for Gemini
-
+        
         #querying Gemini to get pre-req list
         courses_prereqs_data = get_prereqs.get_prereq_list(major, gemini_data)
 
