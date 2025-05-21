@@ -12,8 +12,11 @@ def scrape_data(url):
         soup = BeautifulSoup(res.text, 'html.parser')
 
         #finding the major
-        major = soup.find("h1", class_="page title")
-        major = major.get_text(strip=True)
+        major = soup.find("h1", class_="page-title")
+        if major:
+            major = major.get_text(strip=True)
+        else:
+            "Degree Not Found"
 
         #finding all required courses: 
         course_codes = soup.find_all("td", class_="codecol")
