@@ -1,13 +1,10 @@
 from flask import Flask, render_template, request, redirect, url_for
 import json, os
 #importing scripts
-#import get_prereqs, scraper --> offloaded to redis
+import get_prereqs, scraper
+
 from datetime import datetime
 
-# Import Celery app and tasks
-from tasks import celery_app, run_scraping_task, run_get_prereqs_task, process_final_data_task
-from celery import chain
-from celery.exceptions import TimeoutError as CeleryTimeoutError # For catching task timeout
 
 
 app = Flask(__name__)
@@ -319,20 +316,17 @@ course_details_data = {
     }
 }
 
-#Parsing the semester offered to a color for css --> off-loaded to redis
-# def parse_semester_to_color(semester_text):
-#     if not isinstance(semester_text, str): return "grey"
-#     text = semester_text.lower()
-#     if "fall and winter" in text or "autumn and winter" in text: return "purple"
-#     if "fall" in text or "autumn" in text: return "orange"
-#     if "winter" in text: return "blue"
-#     if "summer" in text: return "green"
-#     return "LightGray"
+def parse_semester_to_color(semester_text):
+    if not isinstance(semester_text, str): return "grey"
+    text = semester_text.lower()
+    if "fall and winter" in text or "autumn and winter" in text: return "purple"
+    if "fall" in text or "autumn" in text: return "orange"
+    if "winter" in text: return "blue"
+    if "summer" in text: return "green"
+    return "LightGray"
 
 @app.route('/demo')
 def index():
-
-    from tasks import parse_semester_to_color # --> off-loaded to redis
 
     processed_details_data = {}
     for code, details in course_details_data.items():
@@ -382,7 +376,6 @@ def scrape_route():
         # when a user uploads a JSON file
         action = request.form.get('action')
         if action == "Load Graph":
-            from tasks import parse_semester_to_color
 
             if 'graphFile' not in request.files:
                 return render_template('scrape_form.html', error="No file selected for upload.")
@@ -474,90 +467,49 @@ def scrape_route():
         if not (url and url.startswith("https://coursecatalogue.mcgill.ca/en/undergraduate/") and url.endswith("/#coursestext")):
             return render_template("scrape_form.html", error="Make sure to provide a valid McGill course page url.")
 
-    # ENTIRE CODE off-loaded to redis
+        infos = scraper.scrape_data(url)
 
-    #     infos = scraper.scrape_data(url)
-
-    #     major = infos[3] # the major scraped from the website
-    #     gemini_data = infos[2] # dictionary of minimial info needed for Gemini
+        major = infos[3] # the major scraped from the website
+        gemini_data = infos[2] # dictionary of minimial info needed for Gemini
         
-    #     #querying Gemini to get pre-req list
-    #     courses_prereqs_data = get_prereqs.get_prereq_list(major, gemini_data)
+        #querying Gemini to get pre-req list
+        courses_prereqs_data = get_prereqs.get_prereq_list(major, gemini_data)
 
-    #     course_details_data = infos[1] # dictionary of info needed to build the network
+        course_details_data = infos[1] # dictionary of info needed to build the network
 
-    #     processed_details_data = {}
-    #     for code, details in course_details_data.items():
-    #         # Ensure all courses have details, even if minimal
-    #         default_detail = {"title": "Unknown Title", "credits": "N/A", "semesters_offered": "Unknown"}
-    #         actual_details = {**default_detail, **details} # Merge with defaults
+        processed_details_data = {}
+        for code, details in course_details_data.items():
+            # Ensure all courses have details, even if minimal
+            default_detail = {"title": "Unknown Title", "credits": "N/A", "semesters_offered": "Unknown"}
+            actual_details = {**default_detail, **details} # Merge with defaults
 
-    #         processed_details_data[code] = {
-    #             **actual_details, 
-    #             "color": parse_semester_to_color(actual_details.get("semesters_offered", ""))
-    #         }
+            processed_details_data[code] = {
+                **actual_details, 
+                "color": parse_semester_to_color(actual_details.get("semesters_offered", ""))
+            }
         
-    #     # Ensure all courses in prereqs_data have an entry in processed_details_data for the graph
-    #     for course_code in courses_prereqs_data.keys():
-    #         if course_code not in processed_details_data:
-    #             processed_details_data[course_code] = {
-    #                 "title": "Unknown Title (Prereq)", 
-    #                 "credits": "N/A", 
-    #                 "semesters_offered": "Unknown",
-    #                 "color": "LightGray"
-    #             }
-    #             # Also ensure this course exists in course_details_data if it's a prereq but not detailed
-    #             if course_code not in course_details_data:
-    #                 course_details_data[course_code] = processed_details_data[course_code]
+        # Ensure all courses in prereqs_data have an entry in processed_details_data for the graph
+        for course_code in courses_prereqs_data.keys():
+            if course_code not in processed_details_data:
+                processed_details_data[course_code] = {
+                    "title": "Unknown Title (Prereq)", 
+                    "credits": "N/A", 
+                    "semesters_offered": "Unknown",
+                    "color": "LightGray"
+                }
+                # Also ensure this course exists in course_details_data if it's a prereq but not detailed
+                if course_code not in course_details_data:
+                    course_details_data[course_code] = processed_details_data[course_code]
 
 
-    #     return render_template('index.html',
-    #                         prereqs=courses_prereqs_data,
-    #                         details=processed_details_data)
+        return render_template('index.html',
+                            prereqs=courses_prereqs_data,
+                            details=processed_details_data)
 
 
-    # else:
-    #     # Default action if no specific button was identified or form submitted without action
-    #     return render_template('scrape_form.html', error="Please select an action.")
-    
-     # Define the Celery chain
-        task_chain = chain(
-            run_scraping_task.s(url),
-            run_get_prereqs_task.s(), # .s() creates a signature, arguments are passed from previous task
-            process_final_data_task.s()
-        )
-
-        try:
-            # Execute the chain and wait for the result
-            # Timeout is for the entire chain. Adjust as needed.
-            async_result = task_chain.apply_async()
-            final_data = async_result.get(timeout=240) # e.g., 4 minutes timeout for the whole chain
-
-            if async_result.failed():
-                 # Access the error information if the task failed
-                 error_info = async_result.info if isinstance(async_result.info, dict) else {'exc_message': str(async_result.info)}
-                 error_message = error_info.get('exc_message', 'Task failed without specific message.')
-                 print(f"Celery task chain failed: {error_message}")
-                 return render_template("scrape_form.html", error=f"Processing error: {error_message}")
-
-
-            return render_template('index.html',
-                                   prereqs=final_data['prereqs'],
-                                   details=final_data['details'])
-
-        except CeleryTimeoutError:
-            # This catches timeout for async_result.get()
-            print("Celery task chain timed out.")
-            return render_template("scrape_form.html", error="Processing your request is taking too long. Please try again later or check the logs.")
-        except Exception as e:
-            # Catch other potential exceptions during task submission or result retrieval
-            print(f"An unexpected error occurred with Celery tasks: {e}")
-            return render_template("scrape_form.html", error=f"An unexpected error occurred: {str(e)}")
-            
-
-    else: # Handle other actions or invalid states
-        return render_template('scrape_form.html', error="Please select an action or provide a URL.")
-
+    else:
+        # Default action if no specific button was identified or form submitted without action
+        return render_template('scrape_form.html', error="Please select an action.")
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
