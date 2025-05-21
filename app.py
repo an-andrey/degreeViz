@@ -1,7 +1,14 @@
 from flask import Flask, render_template, request, redirect, url_for
 import json, os
 #importing scripts
-import get_prereqs, scraper
+#import get_prereqs, scraper --> offloaded to redis
+from datetime import datetime
+
+# Import Celery app and tasks
+from tasks import celery_app, run_scraping_task, run_get_prereqs_task, process_final_data_task
+from celery import chain
+from celery.exceptions import TimeoutError as CeleryTimeoutError # For catching task timeout
+
 
 app = Flask(__name__)
 
@@ -63,267 +70,269 @@ course_details_data = {
     "MATH 133": {
         "title": "Linear Algebra and Geometry.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "MATH 140": {
         "title": "Calculus 1.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 141": {
         "title": "Calculus 2.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "COMP 202": {
         "title": "Foundations of Programming.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "COMP 206": {
         "title": "Introduction to Software Systems.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "COMP 250": {
         "title": "Introduction to Computer Science.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "COMP 252": {
         "title": "Honours Algorithms and Data Structures.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "COMP 273": {
         "title": "Introduction to Computer Systems.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "COMP 302": {
         "title": "Programming Languages and Paradigms.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "COMP 330": {
         "title": "Theory of Computation.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "COMP 362": {
         "title": "Honours Algorithm Design.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "MATH 247": {
         "title": "Honours Applied Linear Algebra.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 248": {
         "title": "Honours Vector Calculus.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 251": {
         "title": "Honours Algebra 2.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 255": {
         "title": "Honours Analysis 2.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "MATH 356": {
         "title": "Honours Probability.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "MATH 357": {
         "title": "Honours Statistics.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "MATH 533": {
         "title": "Regression and Analysis of Variance.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "MATH 242": {
         "title": "Analysis 1.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 254": {
         "title": "Honours Analysis 1.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 235": {
         "title": "Algebra 1.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "MATH 245": {
         "title": "Honours Algebra 1.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 387": {
         "title": "Honours Numerical Analysis.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 397": {
         "title": "Honours Matrix Numerical Analysis.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "MATH 523": {
         "title": "Generalized Linear Models.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "MATH 524": {
         "title": "Nonparametric Statistics.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "MATH 525": {
         "title": "Sampling Theory and Applications.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 527D1": {
         "title": "Statistical Data Science\n Practicum.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 527D2": {
         "title": "Statistical Data Science\n Practicum.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "MATH 556": {
         "title": "Mathematical Statistics 1.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 557": {
         "title": "Mathematical Statistics 2.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "MATH 558": {
         "title": "Design of Experiments.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "MATH 559": {
         "title": "Bayesian Theory and Methods.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "MATH 350": {
         "title": "Honours Discrete Mathematics\n.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "MATH 352": {
         "title": "Problem Seminar.",
         "credits": "1",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "MATH 454": {
         "title": "Honours Analysis 3.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 462": {
         "title": "Machine Learning\n.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "MATH 545": {
         "title": "Introduction to Time Series Analysis.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "MATH 563": {
         "title": "Honours Convex Optimization\n.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "MATH 578": {
         "title": "Numerical Analysis 1.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "MATH 587": {
         "title": "Advanced Probability Theory 1.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "MATH 594": {
         "title": "Topics in Mathematics and Statistics\n.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "COMP 424": {
         "title": "Artificial Intelligence.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "COMP 462": {
         "title": "Computational Biology Methods.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     },
     "COMP 540": {
         "title": "Matrix Computations.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "COMP 547": {
         "title": "Cryptography and Data Security.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "COMP 551": {
         "title": "Applied Machine Learning.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall and Winter"
     },
     "COMP 552": {
         "title": "Combinatorial Optimization.",
         "credits": "4",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "COMP 564": {
         "title": "Advanced Computational Biology Methods and Research.",
         "credits": "0-3",
-        "semesters_offered": ""
+        "semesters_offered": "Fall"
     },
     "COMP 567": {
         "title": "Discrete Optimization 2.",
         "credits": "3",
-        "semesters_offered": ""
+        "semesters_offered": "Winter"
     }
 }
 
-#Parsing the semester offered to a color for css
-def parse_semester_to_color(semester_text):
-    if not isinstance(semester_text, str): return "grey"
-    text = semester_text.lower()
-    if "fall and winter" in text or "autumn and winter" in text: return "purple"
-    if "fall" in text or "autumn" in text: return "orange"
-    if "winter" in text: return "blue"
-    if "summer" in text: return "green"
-    return "LightGray"
+#Parsing the semester offered to a color for css --> off-loaded to redis
+# def parse_semester_to_color(semester_text):
+#     if not isinstance(semester_text, str): return "grey"
+#     text = semester_text.lower()
+#     if "fall and winter" in text or "autumn and winter" in text: return "purple"
+#     if "fall" in text or "autumn" in text: return "orange"
+#     if "winter" in text: return "blue"
+#     if "summer" in text: return "green"
+#     return "LightGray"
 
 @app.route('/demo')
 def index():
+
+    from tasks import parse_semester_to_color # --> off-loaded to redis
 
     processed_details_data = {}
     for code, details in course_details_data.items():
@@ -357,13 +366,29 @@ def index():
 
 @app.route('/', methods=['GET', "POST"])
 def scrape_route():
-    # when a user uploads a JSON file
+    
+    #adding a log for each user query
+    user_ip = request.remote_addr
+    timestamp = datetime.now()
+
+    if request.args.get("action") == "Scrape and Visualize":
+        print(f"user {user_ip} made a {request.args.get('action')} request for {request.args.get('url')} at {timestamp}")
+    else:
+        print(f"user {user_ip} made a {request.args.get('action')} request at {timestamp}")
+
+
     if request.method == 'POST':
+
+        # when a user uploads a JSON file
         action = request.form.get('action')
         if action == "Load Graph":
+            from tasks import parse_semester_to_color
+
             if 'graphFile' not in request.files:
                 return render_template('scrape_form.html', error="No file selected for upload.")
+            
             file = request.files['graphFile']
+
             if file.filename == '':
                 return render_template('scrape_form.html', error="No file selected for upload.")
             
@@ -441,58 +466,99 @@ def scrape_route():
 
     action = request.args.get('action')
     url = request.args.get('url')
-    major = request.args.get('major', 'Not Specified')
 
     if action == "See DEMO":
         return redirect(url_for('index'))
+    
     elif action == "Scrape and Visualize":
-        if not url:
-            return render_template('scrape_form.html', error="URL is required for scraping.")
+        if not (url and url.startswith("https://coursecatalogue.mcgill.ca/en/undergraduate/") and url.endswith("/#coursestext")):
+            return render_template("scrape_form.html", error="Make sure to provide a valid McGill course page url.")
 
-        infos = scraper.scrape_data(url)
+    # ENTIRE CODE off-loaded to redis
 
-        gemini_data = infos[2] # dictionary of minimial info needed for Gemini
+    #     infos = scraper.scrape_data(url)
+
+    #     major = infos[3] # the major scraped from the website
+    #     gemini_data = infos[2] # dictionary of minimial info needed for Gemini
         
-        #querying Gemini to get pre-req list
-        courses_prereqs_data = get_prereqs.get_prereq_list(major, gemini_data)
+    #     #querying Gemini to get pre-req list
+    #     courses_prereqs_data = get_prereqs.get_prereq_list(major, gemini_data)
 
-        course_details_data = infos[1] # dictionary of info needed to build the network
+    #     course_details_data = infos[1] # dictionary of info needed to build the network
 
-        processed_details_data = {}
-        for code, details in course_details_data.items():
-            # Ensure all courses have details, even if minimal
-            default_detail = {"title": "Unknown Title", "credits": "N/A", "semesters_offered": "Unknown"}
-            actual_details = {**default_detail, **details} # Merge with defaults
+    #     processed_details_data = {}
+    #     for code, details in course_details_data.items():
+    #         # Ensure all courses have details, even if minimal
+    #         default_detail = {"title": "Unknown Title", "credits": "N/A", "semesters_offered": "Unknown"}
+    #         actual_details = {**default_detail, **details} # Merge with defaults
 
-            processed_details_data[code] = {
-                **actual_details, 
-                "color": parse_semester_to_color(actual_details.get("semesters_offered", ""))
-            }
+    #         processed_details_data[code] = {
+    #             **actual_details, 
+    #             "color": parse_semester_to_color(actual_details.get("semesters_offered", ""))
+    #         }
         
-        # Ensure all courses in prereqs_data have an entry in processed_details_data for the graph
-        for course_code in courses_prereqs_data.keys():
-            if course_code not in processed_details_data:
-                processed_details_data[course_code] = {
-                    "title": "Unknown Title (Prereq)", 
-                    "credits": "N/A", 
-                    "semesters_offered": "Unknown",
-                    "color": "LightGray"
-                }
-                # Also ensure this course exists in course_details_data if it's a prereq but not detailed
-                if course_code not in course_details_data:
-                    course_details_data[course_code] = processed_details_data[course_code]
+    #     # Ensure all courses in prereqs_data have an entry in processed_details_data for the graph
+    #     for course_code in courses_prereqs_data.keys():
+    #         if course_code not in processed_details_data:
+    #             processed_details_data[course_code] = {
+    #                 "title": "Unknown Title (Prereq)", 
+    #                 "credits": "N/A", 
+    #                 "semesters_offered": "Unknown",
+    #                 "color": "LightGray"
+    #             }
+    #             # Also ensure this course exists in course_details_data if it's a prereq but not detailed
+    #             if course_code not in course_details_data:
+    #                 course_details_data[course_code] = processed_details_data[course_code]
 
 
-        return render_template('index.html',
-                            prereqs=courses_prereqs_data,
-                            details=processed_details_data)
+    #     return render_template('index.html',
+    #                         prereqs=courses_prereqs_data,
+    #                         details=processed_details_data)
 
 
-    else:
-        # Default action if no specific button was identified or form submitted without action
-        return render_template('scrape_form.html', error="Please select an action.")
+    # else:
+    #     # Default action if no specific button was identified or form submitted without action
+    #     return render_template('scrape_form.html', error="Please select an action.")
+    
+     # Define the Celery chain
+        task_chain = chain(
+            run_scraping_task.s(url),
+            run_get_prereqs_task.s(), # .s() creates a signature, arguments are passed from previous task
+            process_final_data_task.s()
+        )
+
+        try:
+            # Execute the chain and wait for the result
+            # Timeout is for the entire chain. Adjust as needed.
+            async_result = task_chain.apply_async()
+            final_data = async_result.get(timeout=240) # e.g., 4 minutes timeout for the whole chain
+
+            if async_result.failed():
+                 # Access the error information if the task failed
+                 error_info = async_result.info if isinstance(async_result.info, dict) else {'exc_message': str(async_result.info)}
+                 error_message = error_info.get('exc_message', 'Task failed without specific message.')
+                 print(f"Celery task chain failed: {error_message}")
+                 return render_template("scrape_form.html", error=f"Processing error: {error_message}")
+
+
+            return render_template('index.html',
+                                   prereqs=final_data['prereqs'],
+                                   details=final_data['details'])
+
+        except CeleryTimeoutError:
+            # This catches timeout for async_result.get()
+            print("Celery task chain timed out.")
+            return render_template("scrape_form.html", error="Processing your request is taking too long. Please try again later or check the logs.")
+        except Exception as e:
+            # Catch other potential exceptions during task submission or result retrieval
+            print(f"An unexpected error occurred with Celery tasks: {e}")
+            return render_template("scrape_form.html", error=f"An unexpected error occurred: {str(e)}")
+            
+
+    else: # Handle other actions or invalid states
+        return render_template('scrape_form.html', error="Please select an action or provide a URL.")
 
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=True)

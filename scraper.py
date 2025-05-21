@@ -11,6 +11,10 @@ def scrape_data(url):
         res = requests.get(url)
         soup = BeautifulSoup(res.text, 'html.parser')
 
+        #finding the major
+        major = soup.find("h1", class_="page title")
+        major = major.get_text(strip=True)
+
         #finding all required courses: 
         course_codes = soup.find_all("td", class_="codecol")
         course_codes = [code.get_text(strip=True) for code in course_codes]
@@ -33,7 +37,7 @@ def scrape_data(url):
         # Extract hrefs
         links = [btn['href'] for btn in buttons if btn.has_attr('href')]
         
-        return course_codes, credits_list, titles_list, desc_list, links
+        return major, course_codes, credits_list, titles_list, desc_list, links
 
     def extract_course_prereq(url):
         res = requests.get(url)
@@ -71,7 +75,7 @@ def scrape_data(url):
 
     page_url = url
     # page_url = "https://coursecatalogue.mcgill.ca/en/undergraduate/science/programs/mathematics-statistics/statistics-computer-science-honours-bsc/#coursestext"
-    course_codes, credits_list, titles_list, desc_list, links = extract_course_info(page_url)
+    major, course_codes, credits_list, titles_list, desc_list, links = extract_course_info(page_url)
 
     base_url = "https://coursecatalogue.mcgill.ca"
 
@@ -111,4 +115,4 @@ def scrape_data(url):
             "Prerequisite(s)": f"{prereq} and {coreq}",
         }
 
-    return [courses_info, network_info, simplified_info]
+    return [courses_info, network_info, simplified_info, major]
