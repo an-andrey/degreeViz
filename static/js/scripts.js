@@ -131,7 +131,7 @@ document.addEventListener("DOMContentLoaded", function () {
       hover: true,
       zoomView: true,
       tooltipDelay: 200,
-      navigationButtons: false,
+      navigationButtons: true,
       keyboard: true,
     },
     manipulation: {

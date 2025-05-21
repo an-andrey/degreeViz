@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DegreeViz</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}" type="image/png">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f7f6; color: #333; }
@@ -11,8 +12,8 @@
         label { display: block; margin-bottom: 8px; font-weight: bold; color: #333; }
         input[type="url"], input[type="text"], input[type="file"] { width: 100%; padding: 10px; margin-bottom: 20px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; }
         input[type="submit"], .action-button { padding: 12px 18px; color: white; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; font-size: 1em; }
-        input[type="submit"][value="Scrape and Visualize"] { background-color: #007bff; }
-        input[type="submit"][value="Scrape and Visualize"]:hover { background-color: #0056b3; }
+        input[type="submit"][value="Visualize Program"] { background-color: #007bff; }
+        input[type="submit"][value="Visualize Program"]:hover { background-color: #0056b3; }
         input[type="submit"][value="See DEMO"] { background-color: #6c757d; }
         input[type="submit"][value="See DEMO"]:hover { background-color: #545b62; }
         .action-button#loadGraphBtn { background-color: #28a745; }
@@ -23,6 +24,26 @@
         h1, h2 { color: #2c3e50; text-align: center;}
         h1 { margin-bottom: 25px;}
         h2 { margin-bottom: 15px; font-size: 1.5em;}
+
+        /* Mobile-friendly adjustments */
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                padding: 15px;
+                width: auto; /* Allow it to take available width */
+            }
+            input[type="submit"], .action-button {
+                display: block; /* Stack buttons */
+                width: 100%;    /* Make buttons full width */
+                margin-right: 0;
+                margin-bottom: 10px; /* Add space between stacked buttons */
+            }
+            input[type="submit"]:last-of-type, .action-button:last-of-type {
+                margin-bottom: 0; /* No margin for the last button in a group */
+            }
+            h1 { font-size: 1.8em; }
+            h2 { font-size: 1.3em; }
+        }
     </style>
 </head>
 <!-- Google tag (gtag.js) -->
@@ -36,26 +57,27 @@
 </script>
 <body>
     <div class="container">
-        <h1>Course Visualizer Options</h1>
+        <h1>DegreeViz</h1>
+        <p class="site-description" style="text-align: center; margin-bottom: 25px; font-size: 1.1em; color: #555;">
+            Visualize your university degree program! See course prerequisites and plan your academic journey.
+            You can generate a new visualization from a McGill course catalogue URL or load a previously saved graph.
+        </p>
 
         <div class="form-section">
-            <h2>Option 1: Scrape New Data or View Demo</h2>
+            <h2>Create a New Plan</h2>
             <form id="scrapeForm" action="{{ url_for('scrape_route') }}" method="GET">
-                <label for="url">McGill Program URL:</label>
-                <input type="url" id="url" name="url" placeholder="https://coursecatalogue.mcgill.ca/...">
+                <label for="url">Enter the URL of your program's page from the McGill Course Catalogue:</label>
+                <input type="url" id="url" name="url" placeholder="e.g., https://coursecatalogue.mcgill.ca/...#coursestext" required>
                 
-                <!-- <label for="major">Your Major (e.g., Mathematics, Computer Science):</label>
-                <input type="text" id="major" name="major" placeholder="Enter your major"> -->
-
-                <input type="submit" id="scrapeButton" name="action" value="Scrape and Visualize">
+                <input type="submit" id="scrapeButton" name="action" value="Visualize Program">
                 <input type="submit" id="demoButton" name="action" value="See DEMO">
             </form>
         </div>
 
         <div class="form-section">
-            <h2>Option 2: Load Graph from File</h2>
+            <h2>Load an Existing Plan</h2>
             <form id="loadForm" action="{{ url_for('scrape_route') }}" method="POST" enctype="multipart/form-data">
-                <label for="graphFile">Select Graph File (.json):</label>
+                <label for="graphFile">Upload a previously exported graph file (.json) to continue your planning:</label>
                 <input type="file" id="graphFile" name="graphFile" accept=".json" required>
                 <input type="hidden" name="action" value="Load Graph">
                 <button type="submit" id="loadGraphBtn" class="action-button">Load Graph</button>
@@ -63,7 +85,7 @@
         </div>
 
         {% if error %}
-            <p class="error">{{ error }}</p>
+            <p class="error">{{ error | safe }}</p>
         {% endif %}
     </div>
 

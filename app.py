@@ -65,252 +65,252 @@ courses_prereqs_data = {
 
 course_details_data = {
     "MATH 133": {
-        "title": "Linear Algebra and Geometry.",
+        "title": "Linear Algebra and Geometry",
         "credits": "3",
         "semesters_offered": "Fall"
     },
     "MATH 140": {
-        "title": "Calculus 1.",
+        "title": "Calculus 1",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "MATH 141": {
-        "title": "Calculus 2.",
+        "title": "Calculus 2",
         "credits": "4",
         "semesters_offered": "Fall and Winter"
     },
     "COMP 202": {
-        "title": "Foundations of Programming.",
+        "title": "Foundations of Programming",
         "credits": "3",
         "semesters_offered": "Fall"
     },
     "COMP 206": {
-        "title": "Introduction to Software Systems.",
+        "title": "Introduction to Software Systems",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "COMP 250": {
-        "title": "Introduction to Computer Science.",
+        "title": "Introduction to Computer Science",
         "credits": "3",
         "semesters_offered": "Fall"
     },
     "COMP 252": {
-        "title": "Honours Algorithms and Data Structures.",
+        "title": "Honours Algorithms and Data Structures",
         "credits": "3",
         "semesters_offered": "Fall and Winter"
     },
     "COMP 273": {
-        "title": "Introduction to Computer Systems.",
+        "title": "Introduction to Computer Systems",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "COMP 302": {
-        "title": "Programming Languages and Paradigms.",
+        "title": "Programming Languages and Paradigms",
         "credits": "3",
         "semesters_offered": "Fall"
     },
     "COMP 330": {
-        "title": "Theory of Computation.",
+        "title": "Theory of Computation",
         "credits": "3",
         "semesters_offered": "Fall and Winter"
     },
     "COMP 362": {
-        "title": "Honours Algorithm Design.",
+        "title": "Honours Algorithm Design",
         "credits": "3",
         "semesters_offered": "Fall"
     },
     "MATH 247": {
-        "title": "Honours Applied Linear Algebra.",
+        "title": "Honours Applied Linear Algebra",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "MATH 248": {
-        "title": "Honours Vector Calculus.",
+        "title": "Honours Vector Calculus",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "MATH 251": {
-        "title": "Honours Algebra 2.",
+        "title": "Honours Algebra 2",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "MATH 255": {
-        "title": "Honours Analysis 2.",
+        "title": "Honours Analysis 2",
         "credits": "3",
         "semesters_offered": "Fall"
     },
     "MATH 356": {
-        "title": "Honours Probability.",
+        "title": "Honours Probability",
         "credits": "3",
         "semesters_offered": "Fall and Winter"
     },
     "MATH 357": {
-        "title": "Honours Statistics.",
+        "title": "Honours Statistics",
         "credits": "3",
         "semesters_offered": "Fall and Winter"
     },
     "MATH 533": {
-        "title": "Regression and Analysis of Variance.",
+        "title": "Regression and Analysis of Variance",
         "credits": "4",
         "semesters_offered": "Fall"
     },
     "MATH 242": {
-        "title": "Analysis 1.",
+        "title": "Analysis 1",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "MATH 254": {
-        "title": "Honours Analysis 1.",
+        "title": "Honours Analysis 1",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "MATH 235": {
-        "title": "Algebra 1.",
+        "title": "Algebra 1",
         "credits": "3",
         "semesters_offered": "Fall"
     },
     "MATH 245": {
-        "title": "Honours Algebra 1.",
+        "title": "Honours Algebra 1",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "MATH 387": {
-        "title": "Honours Numerical Analysis.",
+        "title": "Honours Numerical Analysis",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "MATH 397": {
-        "title": "Honours Matrix Numerical Analysis.",
+        "title": "Honours Matrix Numerical Analysis",
         "credits": "3",
         "semesters_offered": "Fall"
     },
     "MATH 523": {
-        "title": "Generalized Linear Models.",
+        "title": "Generalized Linear Models",
         "credits": "4",
         "semesters_offered": "Fall and Winter"
     },
     "MATH 524": {
-        "title": "Nonparametric Statistics.",
+        "title": "Nonparametric Statistics",
         "credits": "4",
         "semesters_offered": "Fall and Winter"
     },
     "MATH 525": {
-        "title": "Sampling Theory and Applications.",
+        "title": "Sampling Theory and Applications",
         "credits": "4",
         "semesters_offered": "Winter"
     },
     "MATH 527D1": {
-        "title": "Statistical Data Science\n Practicum.",
+        "title": "Statistical Data Science\n Practicum",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "MATH 527D2": {
-        "title": "Statistical Data Science\n Practicum.",
+        "title": "Statistical Data Science\n Practicum",
         "credits": "3",
         "semesters_offered": "Fall"
     },
     "MATH 556": {
-        "title": "Mathematical Statistics 1.",
+        "title": "Mathematical Statistics 1",
         "credits": "4",
         "semesters_offered": "Winter"
     },
     "MATH 557": {
-        "title": "Mathematical Statistics 2.",
+        "title": "Mathematical Statistics 2",
         "credits": "4",
         "semesters_offered": "Fall"
     },
     "MATH 558": {
-        "title": "Design of Experiments.",
+        "title": "Design of Experiments",
         "credits": "4",
         "semesters_offered": "Fall and Winter"
     },
     "MATH 559": {
-        "title": "Bayesian Theory and Methods.",
+        "title": "Bayesian Theory and Methods",
         "credits": "4",
         "semesters_offered": "Fall and Winter"
     },
     "MATH 350": {
-        "title": "Honours Discrete Mathematics\n.",
+        "title": "Honours Discrete Mathematics\n",
         "credits": "3",
         "semesters_offered": "Fall"
     },
     "MATH 352": {
-        "title": "Problem Seminar.",
+        "title": "Problem Seminar",
         "credits": "1",
         "semesters_offered": "Fall"
     },
     "MATH 454": {
-        "title": "Honours Analysis 3.",
+        "title": "Honours Analysis 3",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "MATH 462": {
-        "title": "Machine Learning\n.",
+        "title": "Machine Learning\n",
         "credits": "3",
         "semesters_offered": "Fall and Winter"
     },
     "MATH 545": {
-        "title": "Introduction to Time Series Analysis.",
+        "title": "Introduction to Time Series Analysis",
         "credits": "4",
         "semesters_offered": "Fall and Winter"
     },
     "MATH 563": {
-        "title": "Honours Convex Optimization\n.",
+        "title": "Honours Convex Optimization\n",
         "credits": "4",
         "semesters_offered": "Fall"
     },
     "MATH 578": {
-        "title": "Numerical Analysis 1.",
+        "title": "Numerical Analysis 1",
         "credits": "4",
         "semesters_offered": "Winter"
     },
     "MATH 587": {
-        "title": "Advanced Probability Theory 1.",
+        "title": "Advanced Probability Theory 1",
         "credits": "4",
         "semesters_offered": "Fall and Winter"
     },
     "MATH 594": {
-        "title": "Topics in Mathematics and Statistics\n.",
+        "title": "Topics in Mathematics and Statistics\n",
         "credits": "4",
         "semesters_offered": "Fall and Winter"
     },
     "COMP 424": {
-        "title": "Artificial Intelligence.",
+        "title": "Artificial Intelligence",
         "credits": "3",
         "semesters_offered": "Fall"
     },
     "COMP 462": {
-        "title": "Computational Biology Methods.",
+        "title": "Computational Biology Methods",
         "credits": "3",
         "semesters_offered": "Winter"
     },
     "COMP 540": {
-        "title": "Matrix Computations.",
+        "title": "Matrix Computations",
         "credits": "4",
         "semesters_offered": "Fall and Winter"
     },
     "COMP 547": {
-        "title": "Cryptography and Data Security.",
+        "title": "Cryptography and Data Security",
         "credits": "4",
         "semesters_offered": "Fall"
     },
     "COMP 551": {
-        "title": "Applied Machine Learning.",
+        "title": "Applied Machine Learning",
         "credits": "4",
         "semesters_offered": "Fall and Winter"
     },
     "COMP 552": {
-        "title": "Combinatorial Optimization.",
+        "title": "Combinatorial Optimization",
         "credits": "4",
         "semesters_offered": "Fall"
     },
     "COMP 564": {
-        "title": "Advanced Computational Biology Methods and Research.",
+        "title": "Advanced Computational Biology Methods and Research",
         "credits": "0-3",
         "semesters_offered": "Fall"
     },
     "COMP 567": {
-        "title": "Discrete Optimization 2.",
+        "title": "Discrete Optimization 2",
         "credits": "3",
         "semesters_offered": "Winter"
     }
@@ -319,10 +319,10 @@ course_details_data = {
 def parse_semester_to_color(semester_text):
     if not isinstance(semester_text, str): return "grey"
     text = semester_text.lower()
-    if "fall and winter" in text or "autumn and winter" in text: return "purple"
-    if "fall" in text or "autumn" in text: return "orange"
-    if "winter" in text: return "blue"
-    if "summer" in text: return "green"
+    if "fall and winter" in text: return "DarkOrchid"
+    if "fall" in text: return "Coral"
+    if "winter" in text: return "CornFlowerBlue"
+    if "summer" in text: return "Gold"
     return "LightGray"
 
 @app.route('/demo')
@@ -463,9 +463,9 @@ def scrape_route():
     if action == "See DEMO":
         return redirect(url_for('index'))
     
-    elif action == "Scrape and Visualize":
+    elif action == "Visualize Program":
         if not (url and url.startswith("https://coursecatalogue.mcgill.ca/en/undergraduate/") and url.endswith("/#coursestext")):
-            return render_template("scrape_form.html", error="Make sure to provide a valid McGill course page url.")
+            return render_template("scrape_form.html", error="Make sure to provide a valid McGill course page url. You can find it at the <a href='https://coursecatalogue.mcgill.ca/en/undergraduate/'>Course Catalogue</a> and choose your program!")
 
         infos = scraper.scrape_data(url)
 
@@ -508,8 +508,14 @@ def scrape_route():
 
 
     else:
-        # Default action if no specific button was identified or form submitted without action
-        return render_template('scrape_form.html', error="Please select an action.")
+        # Default action if no specific button was identified (e.g. initial GET request)
+        # OR if form submitted without a recognized action
+        if request.method == 'GET' and action is None:
+            # This is an initial GET request to the form, no error needed
+            return render_template('scrape_form.html')
+        else:
+            # This could be a GET with an unknown action or some other case
+            return render_template('scrape_form.html', error="Please select a valid action.")
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

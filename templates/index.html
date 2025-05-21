@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>DegreeViz</title>
+    <link rel="icon" href="{{ url_for('static', filename='favicon.png') }}" type="image/png">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
 </head>
@@ -33,6 +34,11 @@
 
         <div id="courseNetwork"></div>    
     </div>
+
+    <footer>
+        <p>Due to ambiguous prerequisites in the Course Catalogue, some prerequisites might be incorrect or missing,
+             please always double check with <a href="https://coursecatalogue.mcgill.ca/courses/">McGill's Course Catalogue</a> to ensure correct information.</p>
+    </footer>
 
     <script type="text/javascript">
         // Pass Flask data to JavaScript global variables

@@ -112,3 +112,56 @@ h1 {
   margin-bottom: 20px;
   color: #444;
 }
+
+footer {
+  text-align: center;
+  padding: 20px;
+  margin-top: 30px;
+  font-size: 0.9em;
+  color: #666;
+  border-top: 1px solid #eee;
+}
+
+/* Mobile-friendly adjustments for index.html */
+@media (max-width: 768px) {
+  .page-container {
+    padding: 10px;
+  }
+
+  .custom-manipulation-buttons button {
+    display: block; /* Stack buttons */
+    width: 100%; /* Make buttons full width */
+    margin-bottom: 10px;
+    padding: 12px 15px; /* Adjust padding if needed */
+  }
+
+  .custom-manipulation-buttons button:last-child {
+    margin-bottom: 0;
+  }
+
+  #courseNetwork {
+    height: 60vh; /* Adjust height for smaller screens if needed */
+  }
+
+  header h1 {
+    font-size: 1.8em; /* Adjust header font size */
+  }
+
+  footer {
+    padding: 15px;
+    font-size: 0.85em; /* Adjust footer font size */
+  }
+}
+
+/* Further adjustments for very small screens if necessary */
+@media (max-width: 480px) {
+  header h1 {
+    font-size: 1.5em;
+  }
+  .custom-manipulation-buttons button {
+    font-size: 0.9em; /* Slightly smaller font on buttons */
+  }
+  #courseNetwork {
+    height: 50vh;
+  }
+}

@@ -28,7 +28,7 @@ def scrape_data(url):
 
         #finding all the titles: 
         titles_list = soup.find_all("p", class_="bubbledrawer__title")
-        titles_list = [title.get_text(strip=True) for title in titles_list]
+        titles_list = [title.get_text(strip=True)[:-1] for title in titles_list]
         
         #finding all the descriptions: 
         desc_list = soup.find_all("p", class_="bubbledrawer__desc")
@@ -51,6 +51,9 @@ def scrape_data(url):
         coreq_text = ""
 
         info_div = soup.find("div", class_="text detail-note_text margin--default")
+        if not info_div:
+            return ["",""]
+
         li_list = info_div.find_all("li")
 
         for li in li_list:
