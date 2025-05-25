@@ -1,8 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for
 import json, os
 #importing scripts
-import get_prereqs, scraper
-
+import scripts.get_prereqs as get_prereqs, scripts.scraper as scraper, scripts.get_program_codes as get_program_codes
 from datetime import datetime
 
 
@@ -317,14 +316,19 @@ course_details_data = {
 }
 
 
+courses_info = {}
+with open('static/json/courses_info.json', 'r', encoding='utf-8') as f:
+    courses_info = json.load(f)
+
+
 #Make sure to update the function defined in scripts.js too
 def parse_semester_to_color(semester_text):
     if not isinstance(semester_text, str): return "LightGray"
-    text = semester_text.lower()
-    if "Fall" in text and "Winter" in text: return "DarkOrchid"
-    if "Fall" in text: return "Coral"
-    if "Winter" in text: return "CornFlowerBlue"
-    if "Summer" in text: return "Gold"
+
+    if "Fall" in semester_text and "Winter" in semester_text: return "Lavender"
+    if "Fall" in semester_text: return "Coral"
+    if "Winter" in semester_text: return "LightSkyBlue"
+    if "Summer" in semester_text: return "Gold"
     return "LightGray"
 
 @app.route('/demo')
@@ -461,23 +465,36 @@ def scrape_route():
 
     action = request.args.get('action')
     url = request.args.get('url')
+    major = request.args.get("searchResults")
 
-    if action == "See DEMO":
-        return redirect(url_for('index'))
+    # DEMO feature has been disabled for now
+    # if action == "See DEMO":
+    #     return redirect(url_for('index'))
     
-    elif action == "Visualize Program":
+    if action == "Visualize Program":
+        # Note: since the autofill option implemented, this error should not appear anymore, but kept here for completeness
         if not (url and url.startswith("https://coursecatalogue.mcgill.ca/en/undergraduate/") and url.endswith("/#coursestext")):
             return render_template("scrape_form.html", error="Make sure to provide a valid McGill course page url. You can find it at the <a href='https://coursecatalogue.mcgill.ca/en/undergraduate/'>Course Catalogue</a> and choose your program!")
 
-        infos = scraper.scrape_data(url)
+        codes = get_program_codes.get_program_codes(url)
 
-        major = infos[3] # the major scraped from the website
-        gemini_data = infos[2] # dictionary of minimial info needed for Gemini
+        course_details_data = {} # dictionary of info needed to build the network
+        gemini_data = {} # dictionary of minimial info needed for Gemini
+
+        for code in codes:
+            course_details_data[code] = {
+                "title": courses_info[code]["Title"],
+                "credits": courses_info[code]["Credits"],
+                "semesters_offered": courses_info[code]["Terms_Offered"],
+            }
+
+            gemini_data[code] = {
+                "Title": courses_info[code]["Title"],
+                "Prerequisites": courses_info[code]["Prerequisites"]
+            }
         
         #querying Gemini to get pre-req list
         courses_prereqs_data = get_prereqs.get_prereq_list(major, gemini_data)
-
-        course_details_data = infos[1] # dictionary of info needed to build the network
 
         processed_details_data = {}
         for code, details in course_details_data.items():

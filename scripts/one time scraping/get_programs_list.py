@@ -81,5 +81,5 @@ programs["Environment Joint Honours Component (B.A.)"] = "https://coursecatalogu
 programs["Dentistry (Four-Year Program) (D.M.D.)"] = "https://coursecatalogue.mcgill.ca/en/undergraduate/dentistry/professional/dentistry-programs/dentistry-dmd/#coursestext"
 
 #creating the json file
-with open("static/jsons/programs.json", "w", encoding="utf-8") as f:
+with open("static/json/programs.json", "w", encoding="utf-8") as f:
     json.dump(programs, f, ensure_ascii=False, indent=4)

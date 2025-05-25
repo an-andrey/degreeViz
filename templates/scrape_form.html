@@ -305,7 +305,7 @@
       async function fetchPrograms() {
         try {
           const response = await fetch(
-            "{{ url_for('static', filename='jsons/programs.json') }}"
+            "{{ url_for('static', filename='json/programs.json') }}"
           );
           if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);

@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", function () {
         id: courseId,
         label: `${courseId}\n${detail.title || "Unknown Title"}\n(${
           detail.credits || "N/A"
-        } credits)`,
+        } credits)\n${detail.semesters_offered || "Unknown"}`,
         color: detail.color || parseSemesterToColor(detail.semesters_offered), // Use provided color or parse
         shape: "box",
         font: { multi: "html", align: "center" },
@@ -248,11 +248,12 @@ document.addEventListener("DOMContentLoaded", function () {
   // if changing, make sure to update the one defined in app.py
   function parseSemesterToColor(semesterText) {
     if (typeof semesterText !== "string") return "LightGray";
-    const text = semesterText.toLowerCase();
-    if (text.includes("Fall") && text.includes("Winter")) return "DarkOrchid";
-    if (text.includes("Fall")) return "Coral";
-    if (text.includes("Winter")) return "CornFlowerBlue";
-    if (text.includes("Summer")) return "Gold";
+
+    if (semesterText.includes("Fall") && semesterText.includes("Winter"))
+      return "Lavender";
+    if (semesterText.includes("Fall")) return "Coral";
+    if (semesterText.includes("Winter")) return "LightSkyBlue";
+    if (semesterText.includes("Summer")) return "Gold";
     return "LightGray";
   }
 
