@@ -32,9 +32,7 @@ export function getVisNetworkOptions(nodes, edges) {
       scaling: {
         label: {
           enabled: true, // Ensure label scaling is enabled to use its sub-options
-          drawThreshold: 0, // <<< KEY CHANGE HERE: Labels hidden if their calculated size is less than this. 0 = always draw.
-          // min: 10, // Optional: Minimum font size (in px) when scaling
-          // max: 30, // Optional: Maximum font size (in px) when scaling
+          drawThreshold: 0,
         },
       },
     },

@@ -16,17 +16,20 @@ def get_prereq_list(major_name, major_courses_data):
 
     model = genai.GenerativeModel('gemini-1.5-flash') # Recommended model for efficiency
     courses_json_string = json.dumps(major_courses_data, indent=None, separators=(',', ':')) # Even more compact JSON
-
+    
     prompt = f"""
     You are an academic advisor of McGill Univserity, tasked with creating a python dictionary of a recommended definite pre-requisite selection for the courses provided by the programmers. 
-    Given courses for '{major_name}' major, Identify definitive prerequisites. Resolve 'OR' ambiguities by choosing the most relevant course within the major.
-    Ignore corequisites and 'permission of department' if a course is specified. OUTPUT ONLY THE PYTHON DICTIONARY, NOTHING ELSE in the format of {{course_code: [prereqs]}}. The pre-reqs should only be course codes, drop anything that is not a course code.
+    Given courses for '{major_name}' major, Identify definitive prerequisites and corequisites. For corequisites, treat each corequisite as a prerequisite for the other course involved.
+    Resolve 'OR' ambiguities by choosing the most relevant course within the major. If you are given an OR, make sure to choose a course that is part of the courses provided, when possible.
+    Ignore corequisites and 'permission of department' if a course is specified. OUTPUT ONLY THE PYTHON DICTIONARY, NOTHING ELSE in the format of {{course_code: [prereqs and coreqs]}}.
+    The pre-reqs should only be course codes, drop anything that is not a course code.
     {courses_json_string} 
-    """ 
+    """
 
     try:
         response = model.generate_content(prompt)
         text_response = response.text.strip()
+
         # Clean up markdown blocks and attempt to parse
         if text_response.startswith("```python"):
             text_response = text_response[len("```python"):].strip()

@@ -25,7 +25,8 @@ def process_program_data(program_url, major):
                 }
                 gemini_data[code] = {
                     "Title": courses_info[code]["Title"],
-                    "Prerequisites": courses_info[code]["Prerequisites"]
+                    "Prerequisites": courses_info[code]["Prerequisites"],
+                    "Corequisites": courses_info[code]["Corequisites"],
                 }
             else:
                 print(f"Warning: Course code {code} from program {major} not found in global courses_info.json")
@@ -41,6 +42,7 @@ def process_program_data(program_url, major):
         courses_prereqs_data = {}
         if gemini_data:
             courses_prereqs_data = get_prereqs.get_prereq_list(major, gemini_data)
+            print(courses_prereqs_data)
         else:
             print(f"No data prepared for Gemini for program: {major}")
 
@@ -58,23 +60,23 @@ def process_program_data(program_url, major):
         for course_code_prereq in courses_prereqs_data.keys():
             if course_code_prereq not in processed_details_data:
                 processed_details_data[course_code_prereq] = {
-                    "title": f"{course_code_prereq} (Prereq)",
-                    "credits": "N/A",
-                    "semesters_offered": "Unknown",
-                    "color": "LightGray"
+                    "title": f"{courses_info[course_code_prereq]["Title"]} (Prereq)",
+                    "credits": courses_info[course_code_prereq]["Credits"],
+                    "semesters_offered": courses_info[course_code_prereq]["Terms_Offered"],
+                    "color": "LightSteelBlue"
                 }
             # Also ensure all individual prerequisites are in details
             for prereq_item in courses_prereqs_data[course_code_prereq]:
                 if prereq_item not in processed_details_data:
-                     processed_details_data[prereq_item] = {
-                        "title": f"{prereq_item} (Prereq)",
-                        "credits": "N/A",
-                        "semesters_offered": "Unknown",
-                        "color": "LightGray"
+                    processed_details_data[prereq_item] = {
+                        "title": f"{courses_info[prereq_item]["Title"]} (Prereq)",
+                        "credits": courses_info[prereq_item]["Credits"],
+                        "semesters_offered": courses_info[prereq_item]["Terms_Offered"],
+                        "color": "LightSteelBlue"
                     }
 
 
         return courses_prereqs_data, processed_details_data
     except Exception as e:
-        print(f"Error in _process_program_data for {program_url}: {e}")
+        print(f"Error in process_program_data for {program_url}: {e}")
         return None, None

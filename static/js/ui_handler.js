@@ -60,7 +60,7 @@ export function initialLayoutAdjustment(network, nodesDataSet) {
         network.setOptions({
           layout: { hierarchical: { enabled: false } },
         });
-        network.fit();
+        // network.fit();
         hierarchicalEnabledInitial = false;
       }
     });

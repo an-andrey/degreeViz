@@ -103,11 +103,7 @@ def scrape_route():
                     session['graph_data_available'] = True
 
                     return redirect("view_graph")
-                    # return render_template('index.html',
-                    #                        prereqs=final_prereqs_for_template,
-                    #                        details=final_details_for_template)
                 
-            
                 except json.JSONDecodeError:
                     return render_template('scrape_form.html', error="Invalid JSON file: Could not parse content.")
                 except Exception as e:
@@ -121,7 +117,7 @@ def scrape_route():
 
     action = request.args.get('action')
     url = request.args.get('url')
-    major = request.args.get("searchResults")
+    major = request.args.get("programSearch")
     
     if action == "Visualize Program":
         courses_prereqs_data, processed_details_data = prepare_data.process_program_data(url, major)
@@ -132,10 +128,6 @@ def scrape_route():
         session['graph_data_available'] = True
 
         return redirect("view_graph")
-        # return render_template('index.html',
-        #                     prereqs=courses_prereqs_data,
-        #                     details=processed_details_data)
-
 
     else:
         # Default action if no specific button was identified (e.g. initial GET request)
