@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DegreeViz</title>
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='favicon.png') }}"
+      type="image/png"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        background-color: #f4f7f6;
+        color: #333;
+      }
+      .container {
+        max-width: 600px;
+        margin: 20px auto;
+        padding: 25px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        background-color: #fff;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      }
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+      }
+      input[type="url"],
+      input[type="text"],
+      input[type="file"] {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 20px;
+        box-sizing: border-box;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+      }
+      input[type="submit"],
+      .action-button {
+        padding: 12px 18px;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-right: 10px;
+        font-size: 1em;
+      }
+      input[type="submit"][value="Visualize Program"] {
+        background-color: #007bff;
+      }
+      input[type="submit"][value="Visualize Program"]:hover {
+        background-color: #0056b3;
+      }
+      input[type="submit"][value="See DEMO"] {
+        background-color: #6c757d;
+      }
+      input[type="submit"][value="See DEMO"]:hover {
+        background-color: #545b62;
+      }
+      .action-button#loadGraphBtn {
+        background-color: #28a745;
+      }
+      .action-button#loadGraphBtn:hover {
+        background-color: #1e7e34;
+      }
+      .error {
+        color: #dc3545;
+        margin-top: 15px;
+        padding: 10px;
+        background-color: #f8d7da;
+        border: 1px solid #f5c6cb;
+        border-radius: 4px;
+      }
+      .form-section {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #eee;
+      }
+      .form-section:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+        padding-bottom: 0;
+      }
+      h1,
+      h2 {
+        color: #2c3e50;
+        text-align: center;
+      }
+      h1 {
+        margin-bottom: 25px;
+      }
+      h2 {
+        margin-bottom: 15px;
+        font-size: 1.5em;
+      }
+
+      .search-results-container {
+        border: 1px solid #ddd;
+        max-height: 200px;
+        overflow-y: auto;
+        background-color: #fff;
+        margin-top: -20px; /* Adjust to align with input */
+        margin-bottom: 20px;
+        border-radius: 0 0 4px 4px; /* Rounded bottom corners */
+      }
+      .search-results-container div {
+        padding: 10px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+      }
+      .search-results-container div:last-child {
+        border-bottom: none;
+      }
+      .search-results-container div:hover {
+        background-color: #f0f0f0;
+      }
+
+      /* Mobile-friendly adjustments */
+      @media (max-width: 768px) {
+        .container {
+          margin: 10px;
+          padding: 15px;
+          width: auto; /* Allow it to take available width */
+        }
+        input[type="submit"],
+        .action-button {
+          display: block; /* Stack buttons */
+          width: 100%; /* Make buttons full width */
+          margin-right: 0;
+          margin-bottom: 10px; /* Add space between stacked buttons */
+        }
+        input[type="submit"]:last-of-type,
+        .action-button:last-of-type {
+          margin-bottom: 0; /* No margin for the last button in a group */
+        }
+        h1 {
+          font-size: 1.8em;
+        }
+        h2 {
+          font-size: 1.3em;
+        }
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
+  </head>
+  <!-- Google tag (gtag.js) -->
+  <script
+    async
+    src="https://www.googletagmanager.com/gtag/js?id=G-RH00BZSXVM"
+  ></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag() {
+      dataLayer.push(arguments);
+    }
+    gtag("js", new Date());
+
+    gtag("config", "G-RH00BZSXVM");
+  </script>
+  <script></script>
+
+  <body>
+    <div class="container">
+      <h1>DegreeViz</h1>
+      <p
+        class="site-description"
+        style="
+          text-align: center;
+          margin-bottom: 25px;
+          font-size: 1.1em;
+          color: #555;
+        "
+      >
+        Visualize your university degree program! See course prerequisites and
+        plan your academic journey. You can generate a new visualization from a
+        McGill course catalogue URL or load a previously saved graph.
+      </p>
+
+      <div class="form-section">
+        <h2>Create a New Plan</h2>
+        <form
+          id="scrapeForm"
+          action="{{ url_for('scrape_route') }}"
+          method="GET"
+        >
+          <label for="programSearch">Search for your Program:</label>
+          <input
+            type="text"
+            id="programSearch"
+            name="programSearch"
+            placeholder="e.g., Computer Science"
+          />
+          <div id="searchResults" class="search-results-container"></div>
+
+          <input
+            type="hidden"
+            id="url"
+            name="url"
+            placeholder="e.g., https://coursecatalogue.mcgill.ca/...#coursestext"
+            required
+          />
+
+          <input
+            type="submit"
+            id="scrapeButton"
+            name="action"
+            value="Visualize Program"
+          />
+          <input type="submit" id="demoButton" name="action" value="See DEMO" />
+        </form>
+      </div>
+
+      <div class="form-section">
+        <h2>Load an Existing Plan</h2>
+        <form
+          id="loadForm"
+          action="{{ url_for('scrape_route') }}"
+          method="POST"
+          enctype="multipart/form-data"
+        >
+          <label for="graphFile"
+            >Upload a previously exported graph file (.json) to continue your
+            planning:</label
+          >
+          <input
+            type="file"
+            id="graphFile"
+            name="graphFile"
+            accept=".json"
+            required
+          />
+          <input type="hidden" name="action" value="Load Graph" />
+          <button type="submit" id="loadGraphBtn" class="action-button">
+            Load Graph
+          </button>
+        </form>
+      </div>
+
+      {% if error %}
+      <p class="error">{{ error | safe }}</p>
+      {% endif %}
+    </div>
+
+    <script>
+      const scrapeForm = document.getElementById("scrapeForm");
+      const urlInput = document.getElementById("url");
+      const scrapeButton = document.getElementById("scrapeButton");
+      const demoButton = document.getElementById("demoButton");
+      const programSearchInput = document.getElementById("programSearch");
+      const searchResultsContainer = document.getElementById("searchResults");
+
+      let programsList = []; // To store the transformed list of programs for Fuse.js
+      let fuse; // Fuse.js instance
+
+      if (scrapeButton) {
+        scrapeButton.addEventListener("click", function () {
+          urlInput.required = true;
+        });
+      }
+
+      if (demoButton) {
+        demoButton.addEventListener("click", function () {
+          urlInput.required = false;
+        });
+      }
+
+      async function fetchPrograms() {
+        try {
+          const response = await fetch(
+            "{{ url_for('static', filename='jsons/programs.json') }}"
+          );
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          const programsData = await response.json();
+          // Transform data for Fuse.js
+          programsList = Object.keys(programsData).map((name) => ({
+            name: name,
+            url: programsData[name],
+          }));
+
+          // Initialize Fuse.js
+          const options = {
+            keys: ["name"], // Field to search in
+            includeScore: true,
+            threshold: 0.4,
+            ignoreLocation: true,
+            distance: 100,
+            minCharLength: 3,
+          };
+          fuse = new Fuse(programsList, options);
+
+          return programsList;
+        } catch (error) {
+          console.error("Could not fetch or parse programs.json:", error);
+          programsList = [];
+          fuse = null;
+          return [];
+        }
+      }
+
+      function displayResults(results) {
+        searchResultsContainer.innerHTML = ""; // Clear previous results
+        if (results.length === 0 && programSearchInput.value) {
+          searchResultsContainer.innerHTML = "<div>No programs found.</div>";
+          searchResultsContainer.style.display = "block";
+          return;
+        }
+        if (results.length === 0) {
+          searchResultsContainer.style.display = "none";
+          return;
+        }
+
+        results.forEach((result) => {
+          const program = result.item; // Fuse.js wraps the original item
+          const div = document.createElement("div");
+          div.textContent = program.name;
+          div.addEventListener("click", () => {
+            programSearchInput.value = program.name;
+            urlInput.value = program.url;
+            searchResultsContainer.innerHTML = "";
+            searchResultsContainer.style.display = "none";
+          });
+          searchResultsContainer.appendChild(div);
+        });
+        searchResultsContainer.style.display = "block";
+      }
+
+      programSearchInput.addEventListener("input", async () => {
+        if (!fuse) {
+          // Check if fuse is initialized
+          await fetchPrograms(); // Ensure programs are loaded and Fuse is initialized
+          if (!fuse) {
+            // If still not initialized (e.g., fetch error), exit
+            searchResultsContainer.style.display = "none";
+            return;
+          }
+        }
+
+        const query = programSearchInput.value.trim();
+        if (!query) {
+          searchResultsContainer.innerHTML = "";
+          searchResultsContainer.style.display = "none";
+          return;
+        }
+
+        const fuseResults = fuse.search(query);
+        displayResults(fuseResults);
+      });
+
+      // Optional: Hide results when clicking outside
+      document.addEventListener("click", function (event) {
+        if (
+          !programSearchInput.contains(event.target) &&
+          !searchResultsContainer.contains(event.target)
+        ) {
+          searchResultsContainer.style.display = "none";
+        }
+      });
+
+      // Fetch programs when the page loads
+      fetchPrograms();
+    </script>
+  </body>
+</html>

@@ -316,13 +316,15 @@ course_details_data = {
     }
 }
 
+
+#Make sure to update the function defined in scripts.js too
 def parse_semester_to_color(semester_text):
-    if not isinstance(semester_text, str): return "grey"
+    if not isinstance(semester_text, str): return "LightGray"
     text = semester_text.lower()
-    if "fall and winter" in text: return "DarkOrchid"
-    if "fall" in text: return "Coral"
-    if "winter" in text: return "CornFlowerBlue"
-    if "summer" in text: return "Gold"
+    if "Fall" in text and "Winter" in text: return "DarkOrchid"
+    if "Fall" in text: return "Coral"
+    if "Winter" in text: return "CornFlowerBlue"
+    if "Summer" in text: return "Gold"
     return "LightGray"
 
 @app.route('/demo')

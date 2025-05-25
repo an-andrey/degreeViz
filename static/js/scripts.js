@@ -245,15 +245,15 @@ document.addEventListener("DOMContentLoaded", function () {
   };
   const network = new vis.Network(container, data, options);
 
+  // if changing, make sure to update the one defined in app.py
   function parseSemesterToColor(semesterText) {
-    if (typeof semesterText !== "string") return "grey";
+    if (typeof semesterText !== "string") return "LightGray";
     const text = semesterText.toLowerCase();
-    if (text.includes("fall and winter") || text.includes("autumn and winter"))
-      return "purple";
-    if (text.includes("fall") || text.includes("autumn")) return "orange";
-    if (text.includes("winter")) return "blue";
-    if (text.includes("summer")) return "green";
-    return "grey";
+    if (text.includes("Fall") && text.includes("Winter")) return "DarkOrchid";
+    if (text.includes("Fall")) return "Coral";
+    if (text.includes("Winter")) return "CornFlowerBlue";
+    if (text.includes("Summer")) return "Gold";
+    return "LightGray";
   }
 
   // --- Custom Button Event Listeners ---
