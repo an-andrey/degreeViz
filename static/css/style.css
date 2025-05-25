@@ -100,9 +100,9 @@ header p {
   width: 100%;
   height: 80vh;
   border: 1px solid #ddd;
-  border-radius: 5px;
+  border-radius: 10px;
   background-color: #fdfdfd;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Added from your original style.css */
+  box-shadow: 0 8px 8px rgba(0, 0, 0, 0.1); /* Added from your original style.css */
 }
 
 /* General h1 styling if needed, but specific header h1 is above */
