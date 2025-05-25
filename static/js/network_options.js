@@ -20,6 +20,24 @@ export function getVisNetworkOptions(nodes, edges) {
     physics: {
       enabled: false,
     },
+    nodes: {
+      // Global node options
+      shape: "box",
+      font: {
+        // Basic font properties
+        multi: "html",
+        align: "center",
+        // size: 14, // Default font size if needed
+      },
+      scaling: {
+        label: {
+          enabled: true, // Ensure label scaling is enabled to use its sub-options
+          drawThreshold: 0, // <<< KEY CHANGE HERE: Labels hidden if their calculated size is less than this. 0 = always draw.
+          // min: 10, // Optional: Minimum font size (in px) when scaling
+          // max: 30, // Optional: Maximum font size (in px) when scaling
+        },
+      },
+    },
     edges: {
       color: {
         color: "#848484",

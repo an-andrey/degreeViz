@@ -44,4 +44,18 @@ document.addEventListener("DOMContentLoaded", function () {
   setupHomeLinkHandler();
   setupExportButtonHandler(network, nodes, edges);
   initialLayoutAdjustment(network, nodes);
+
+  //disable or enable edit mode depending on where you click
+  network.on("click", function (params) {
+    if (network.manipulation.options.enabled) {
+      // Only if manipulation is active
+      if (params.nodes.length > 0 || params.edges.length > 0) {
+        // Clicked on a node or an edge
+        network.enableEditMode(); // Enables context buttons like "Edit Selected", "Delete Selected"
+      } else {
+        // Clicked on empty space
+        network.disableEditMode(); // Hides context buttons, reverts to general manipulation toolbar
+      }
+    }
+  });
 });
