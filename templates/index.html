@@ -41,11 +41,11 @@
       </header>
       <div class="custom-manipulation-buttons">
         <button id="exportGraphBtn">Export Graph (JSON)</button>
-        <!-- <button id="addNodeBtn">Add Course</button>
-            <button id="addEdgeBtn">Add Prerequisite</button>
-            <button id="editModeBtn">Edit Selected</button>
-            <button id="deleteSelectedBtn">Delete Selected</button>
-            <button id="disableEditModeBtn" style="display:none;">Done Editing</button> -->
+        <a href="{{url_for('add_program')}}">
+          <button id="addProgramToGraphBtn">
+            Add Another Program to Graph
+          </button>
+        </a>
       </div>
       <div id="courseNetwork"></div>
     </div>

@@ -1,25 +1,16 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
 import json, os
 #importing scripts
-import scripts.get_prereqs as get_prereqs, scripts.scraper as scraper, scripts.get_program_codes as get_program_codes
+from scripts import get_program_codes, get_prereqs, prepare_data, utils
 from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = "test"
+
 
 courses_info = {}
 with open('static/json/courses_info.json', 'r', encoding='utf-8') as f:
     courses_info = json.load(f)
-
-
-#Make sure to update the function defined in scripts.js too
-def parse_semester_to_color(semester_text):
-    if not isinstance(semester_text, str): return "LightGray"
-
-    if "Fall" in semester_text and "Winter" in semester_text: return "Orchid"
-    if "Fall" in semester_text: return "Coral"
-    if "Winter" in semester_text: return "LightSkyBlue"
-    if "Summer" in semester_text: return "Gold"
-    return "LightGray"
 
 @app.route('/', methods=['GET', "POST"])
 def scrape_route():
@@ -72,7 +63,7 @@ def scrape_route():
                             "title": node_data.get("original_title", node_data.get("title", "Unknown Title")),
                             "credits": node_data.get("original_credits", node_data.get("credits", "N/A")),
                             "semesters_offered": sem_offered,
-                            "color": node_data.get("color", parse_semester_to_color(sem_offered)), # Use stored color or recalculate
+                            "color": node_data.get("color", utils.parse_semester_to_color(sem_offered)), # Use stored color or recalculate
                             "id": node_id,
                             "label": node_data.get("label", f"{node_id}\nUnknown Title\n(N/A credits)"),
                             "shape": node_data.get("shape", "box"),
@@ -106,9 +97,15 @@ def scrape_route():
                     if not final_details_for_template: # Check if any nodes were actually processed
                          return render_template('scrape_form.html', error="No valid node data found in the uploaded JSON file.")
 
-                    return render_template('index.html',
-                                           prereqs=final_prereqs_for_template,
-                                           details=final_details_for_template)
+                    #Saving the variable to session
+                    session['prereqs_data'] = final_prereqs_for_template
+                    session['details_data'] = final_details_for_template
+                    session['graph_data_available'] = True
+
+                    return redirect("view_graph")
+                    # return render_template('index.html',
+                    #                        prereqs=final_prereqs_for_template,
+                    #                        details=final_details_for_template)
                 
             
                 except json.JSONDecodeError:
@@ -127,65 +124,104 @@ def scrape_route():
     major = request.args.get("searchResults")
     
     if action == "Visualize Program":
-        course_codes = get_program_codes.get_program_codes(url)
-
-        course_details_data = {} # dictionary of info needed to build the network
-        gemini_data = {} # dictionary of minimial info needed for Gemini
-
-        for code in course_codes:
-            course_details_data[code] = {
-                "title": courses_info[code]["Title"],
-                "credits": courses_info[code]["Credits"],
-                "semesters_offered": courses_info[code]["Terms_Offered"],
-            }
-
-            gemini_data[code] = {
-                "Title": courses_info[code]["Title"],
-                "Prerequisites": courses_info[code]["Prerequisites"]
-            }
+        courses_prereqs_data, processed_details_data = prepare_data.process_program_data(url, major)
         
-        #querying Gemini to get pre-req list
-        courses_prereqs_data = get_prereqs.get_prereq_list(major, gemini_data)
+        #Saving the variable to session
+        session['prereqs_data'] = courses_prereqs_data
+        session['details_data'] = processed_details_data
+        session['graph_data_available'] = True
 
-        processed_details_data = {}
-        for code, details in course_details_data.items():
-            # Ensure all courses have details, even if minimal
-            default_detail = {"title": "Unknown Title", "credits": "N/A", "semesters_offered": "Unknown"}
-            actual_details = {**default_detail, **details} # Merge with defaults
-
-            processed_details_data[code] = {
-                **actual_details, 
-                "color": parse_semester_to_color(actual_details.get("semesters_offered", ""))
-            }
-        
-        # Ensure all courses in prereqs_data have an entry in processed_details_data for the graph
-        for course_code in courses_prereqs_data.keys():
-            if course_code not in processed_details_data:
-                processed_details_data[course_code] = {
-                    "title": "Unknown Title (Prereq)", 
-                    "credits": "N/A", 
-                    "semesters_offered": "Unknown",
-                    "color": "LightGray"
-                }
-                # Also ensure this course exists in course_details_data if it's a prereq but not detailed
-                if course_code not in course_details_data:
-                    course_details_data[course_code] = processed_details_data[course_code]
-
-
-        return render_template('index.html',
-                            prereqs=courses_prereqs_data,
-                            details=processed_details_data)
+        return redirect("view_graph")
+        # return render_template('index.html',
+        #                     prereqs=courses_prereqs_data,
+        #                     details=processed_details_data)
 
 
     else:
         # Default action if no specific button was identified (e.g. initial GET request)
         # OR if form submitted without a recognized action
         if request.method == 'GET' and action is None:
+            session.pop('prereqs_data', None)
+            session.pop('details_data', None)
+            session.pop('graph_data_available', None)
             # This is an initial GET request to the form, no error needed
             return render_template('scrape_form.html')
         else:
+            session.pop('prereqs_data', None)
+            session.pop('details_data', None)
+            session.pop('graph_data_available', None)
             # This could be a GET with an unknown action or some other case
             return render_template('scrape_form.html', error="Please select a valid action.")
+
+
+#see if there's a saved graph
+@app.route("/view_graph", methods=["GET","POST"])
+def view_graph():
+    if session.get('graph_data_available'):
+        prereqs = session.get('prereqs_data', {})
+        details = session.get('details_data', {})
+        return render_template('index.html', prereqs=prereqs, details=details)
+    else:
+        # If no data, redirect to home to load/scrape a program
+        return redirect(url_for('scrape_form'))
+
+@app.route("/add_program")
+def add_program():
+    if not session.get('graph_data_available'):
+        return redirect(url_for('scrape_form', error="Please load or visualize a base program first."))
+    return render_template("add_network_form.html")
+
+@app.route("/add_program_to_graph", methods=["GET"])
+def add_program_to_graph():
+    user_ip = request.remote_addr
+    timestamp = datetime.now()
+
+    if not session.get('graph_data_available'):
+        return redirect(url_for('scrape_form', error="No active graph to add to. Please start a new one."))
+
+    new_program_url = request.args.get('url')
+    new_program_name = request.args.get('programSearch') # From add_network_form.html
+
+    if not new_program_url or not new_program_name:
+        return render_template('add_network_form.html', error="Program URL or name missing.")
+
+    print(f"User {user_ip} attempting to add program {new_program_name} ({new_program_url}) at {timestamp}")
+
+    # Fetch and process data for the new program
+    new_prereqs, new_details = prepare_data.process_program_data(new_program_url, new_program_name)
+
+    if new_prereqs is None or new_details is None:
+        return render_template('add_network_form.html', error=f"Could not process data for {new_program_name}.")
+
+    # Retrieve current graph data from session
+    current_prereqs = session.get('prereqs_data', {})
+    current_details = session.get('details_data', {})
+
+    # Merge details: Add new courses, prioritize existing details if a course code clashes.
+    for code, detail_data in new_details.items():
+        if code not in current_details: # Only add if it's a truly new course code
+            current_details[code] = detail_data
+        # Else: if course code exists, we keep the original details.
+        # You could implement more sophisticated merging here if needed (e.g., update if new has more info)
+
+    # Merge prerequisites
+    for code, prereq_list in new_prereqs.items():
+        if code not in current_prereqs:
+            current_prereqs[code] = list(prereq_list) # Ensure it's a new list
+        else:
+            # Add only new prerequisites to the existing list for that course
+            for prereq_item in prereq_list:
+                if prereq_item not in current_prereqs[code]:
+                    current_prereqs[code].append(prereq_item)
+
+    # Store merged data back in session
+    session['prereqs_data'] = current_prereqs
+    session['details_data'] = current_details
+    session['graph_data_available'] = True # Ensure this is set
+
+    print(f"Successfully merged {new_program_name} into the graph for user {user_ip} at {timestamp}")
+    return redirect(url_for('view_graph'))
+
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

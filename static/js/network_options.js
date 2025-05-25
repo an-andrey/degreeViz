@@ -49,10 +49,7 @@ export function getVisNetworkOptions(nodes, edges) {
       enabled: true,
       initiallyActive: false,
       addNode: function (nodeData, callback) {
-        const id = prompt(
-          "Enter new Course ID (e.g., COMP101):",
-          nodeData.id || ""
-        );
+        const id = prompt("Enter new Course ID (e.g., COMP101):", "");
         if (!id) {
           callback(null);
           return;

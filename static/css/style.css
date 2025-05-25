@@ -96,6 +96,14 @@ header p {
   background-color: #218838;
 }
 
+.custom-manipulation-buttons button#addProgramToGraphBtn {
+  background-color: #17a2b8; /* Teal color */
+}
+
+.custom-manipulation-buttons button#addProgramToGraphBtn:hover {
+  background-color: #117a8b; /* Darker teal on hover */
+}
+
 #courseNetwork {
   width: 100%;
   height: 80vh;
