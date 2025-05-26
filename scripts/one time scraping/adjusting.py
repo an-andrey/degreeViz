@@ -1,7 +1,10 @@
 import json
 
+#This file must be run after raw_json to update the json file to the right format and modyfing some of the entries of the json
+
+
 # --- Step 1: Load original JSON data ---
-with open("courses.json", "r", encoding="utf-8") as file:
+with open("static/json/raw.json", "r", encoding="utf-8") as file:
     original_data = json.load(file)
 
 # --- Step 2: Transform data using Course_Code as key ---
@@ -28,7 +31,9 @@ for code, course in transformed_data.items():
     cleaned_data[code] = clean_text(course)  # Clean rest of the fields
 
 # --- Step 4: Save cleaned data ---
-with open("cleaned.json", "w", encoding="utf-8") as f:
+with open("static/json/courses_info.json", "w", encoding="utf-8") as f:
     json.dump(cleaned_data, f, indent=2, ensure_ascii=False)
 
-print("Saved cleaned data to cleaned.json")
+
+
+print("Saved cleaned data to courses_info.json")
