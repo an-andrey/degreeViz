@@ -18,11 +18,11 @@ export function initializeNodes(detailsData) {
         color: detail.color || parseSemesterToColor(detail.semesters_offered),
         shape: "box",
         font: { multi: "html", align: "center" },
-        title: `Course: ${courseId} - ${
-          detail.title || "Unknown Title"
-        }\nCredits: ${detail.credits || "N/A"}\nOffered: ${
-          detail.semesters_offered || "Unknown"
-        }`,
+        // title: `Course: ${courseId} - ${
+        //   detail.title || "Unknown Title"}
+        //   \nCredits: ${detail.credits || "N/A"}\nOffered: ${
+        //   detail.semesters_offered || "Unknown"
+        // }`,
         original_title: detail.title || "Unknown Title",
         original_credits: detail.credits || "N/A",
         original_semesters_offered: detail.semesters_offered || "Unknown",

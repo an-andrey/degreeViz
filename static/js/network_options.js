@@ -65,49 +65,34 @@ export function getVisNetworkOptions(nodes, edges) {
       enabled: true,
       initiallyActive: false,
       addNode: function (nodeData, callback) {
-        const id = prompt("Enter new Course ID (e.g., COMP101):", "");
-        if (!id) {
-          callback(null);
-          return;
+        nodeData.id = prompt("Enter new Course ID (e.g., COMP101):", "");
+        if (!nodeData.id) {
+          alert("Node ID cannot be empty.");
+          return callback(null);
         }
-        if (nodes.get(id)) {
+        if (nodes.get(nodeData.id)) {
           alert("Node with this ID already exists!");
-          callback(null);
-          return;
+          return callback(null);
         }
         const title = prompt("Enter course title:", "New Course");
-        if (title === null) {
-          callback(null);
-          return;
-        }
         const credits = prompt("Enter credits:", "3");
-        if (credits === null) {
-          callback(null);
-          return;
-        }
         const semesters = prompt(
           "Enter semesters offered (e.g., Fall, Winter):",
           "Fall"
         );
-        if (semesters === null) {
-          callback(null);
-          return;
-        }
 
-        const newNodeDataFull = {
-          id: id,
-          label: `${id}\n${title}\n(${credits} credits)\n${semesters}`,
-          title: `Course: ${id} - ${title}\nCredits: ${credits}\nOffered: ${semesters}`,
-          color: parseSemesterToColor(semesters),
-          shape: "box",
-          font: { multi: "html", align: "center" },
-          original_title: title,
-          original_credits: credits,
-          original_semesters_offered: semesters,
-          x: nodeData.x,
-          y: nodeData.y,
-        };
-        callback(newNodeDataFull);
+        nodeData.original_title = title || "New Course";
+        nodeData.original_credits = credits || "3";
+        nodeData.original_semesters_offered = semesters || "Fall";
+
+        nodeData.label = `${nodeData.id}\n${nodeData.original_title}\n(${nodeData.original_credits} credits)`;
+        nodeData.title = `Course: ${nodeData.id} - ${nodeData.original_title}\nCredits: ${nodeData.original_credits}\nOffered: ${nodeData.original_semesters_offered}`;
+        nodeData.color = parseSemesterToColor(
+          nodeData.original_semesters_offered
+        );
+        nodeData.shape = "box";
+        nodeData.font = { multi: "html", align: "center" };
+        callback(nodeData);
       },
       editNode: function (nodeDataToEdit, callback) {
         const newTitle = prompt(
@@ -139,7 +124,7 @@ export function getVisNetworkOptions(nodes, edges) {
         updatedData.original_credits = newCredits;
         updatedData.original_semesters_offered = newSemesters;
         updatedData.label = `${nodeDataToEdit.id}\n${newTitle}\n(${newCredits} credits)\n${newSemesters}`;
-        updatedData.title = `Course: ${nodeDataToEdit.id} - ${newTitle}\nCredits: ${newCredits}\nOffered: ${newSemesters}`;
+        // updatedData.title = `Course: ${nodeDataToEdit.id} - ${newTitle}\nCredits: ${newCredits}\nOffered: ${newSemesters}`;
         updatedData.color = parseSemesterToColor(newSemesters);
         callback(updatedData);
       },
