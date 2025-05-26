@@ -1,7 +1,14 @@
 import json
 
+#This file creates a dictionnary of honours course and their
+#equivalent non honours course with the code of the non-honours course as the key
+
+
+# NOTE THAT SOME OF THE ENTRIES IN THE JSON PRODUCED BY THIS FILE WHERE MANUALLY DELETED SUCH AS HONOURS 
+# HISTORY CLASSES WITH THEIR GRADUATE VERSION
+
 # Load the cleaned JSON file
-with open("cleaned.json", "r", encoding="utf-8") as file:
+with open("static/json/courses_info.json", "r", encoding="utf-8") as file:
     data = json.load(file)
 
 # Normalize and map by department
@@ -20,6 +27,8 @@ for code, info in data.items():
 # Now find Honours courses and try to match with non-Honours ones from same dept
 honours_matches = []
 count = 0
+
+# We exclude these words since these types of classes do not have non-honours version
 excluded_keywords = {"seminar", "thesis", "research", "project", "essay", "Colloquium"}
 
 for code, info in data.items():
@@ -61,5 +70,5 @@ for match in honours_matches:
     honours_match_dict[non_hon_code] = hon_code
 
 # Save to JSON
-with open("honours_matches.json", "w", encoding="utf-8") as outfile:
+with open("static/json/honours_matches.json", "w", encoding="utf-8") as outfile:
     json.dump(honours_match_dict, outfile, indent=2, ensure_ascii=False)
