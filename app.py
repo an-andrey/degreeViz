@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import json, os
 #importing scripts
 from scripts import get_program_codes, get_prereqs, prepare_data, utils
@@ -213,6 +213,97 @@ def add_program_to_graph():
 
     print(f"Successfully merged {new_program_name} into the graph for user {user_ip} at {timestamp}")
     return redirect(url_for('view_graph'))
+
+@app.route('/modify_graph', methods=['GET']) 
+def handle_add_node_via_redirect():
+
+    if not session.get('graph_data_available'):
+        # If no base graph, perhaps redirect to form with an error
+        return redirect(url_for('scrape_form', error='Graph data not initialized. Please load or scrape a program first.'))
+
+    request_type = request.args.get("request")
+    details = session.get('details_data', {})
+    prereqs = session.get("prereqs_data", {})
+
+    print(f"got {request_type} request")
+    
+    #Fro some reason, not able to add node on client side, so refreshing page with new info manually
+    if request_type == "add node":
+        # Extract data from query parameters
+        code = request.args.get('code')
+        credits = request.args.get('credits', "N/A")
+        title = request.args.get("node_title")
+        semesters_offered = request.args.get('semesters_offered', "Unknown")
+        x = request.args.get('x')
+        y = request.args.get('y')
+
+        # Add the node in details_data
+        details[code] = {
+            "title": title, 
+            "credits": credits,
+            "semesters_offered": semesters_offered,
+            "x": x,
+            "y": y,
+            "color": utils.parse_semester_to_color(semesters_offered)
+        }
+
+        session['details_data'] = details
+        session.modified = True
+
+        return redirect(url_for('view_graph'))
+
+    #The rest of the requests are made using asynchronous AJAX requests, info updated with session only on refresh
+    elif request_type == "edit node":
+        code = request.args.get("code")
+        credits = request.args.get('credits', "N/A")
+        title = request.args.get("node_title")
+        semesters_offered = request.args.get('semesters_offered', "Unknown")
+        
+        #update existing info
+        details[code]["credits"] = credits
+        details[code]["title"] = title
+        details[code]["semesters_offered"] = semesters_offered
+        details[code]["color"] = utils.parse_semester_to_color(semesters_offered)
+        
+    elif request_type == "delete node":
+        code = request.args.get("code")
+
+        del details[code] 
+        if code in prereqs:
+            del prereqs[code]
+
+        for course_code in list(prereqs.keys()):
+            preqreq_list = prereqs[course_code]
+
+            if code in preqreq_list:
+                preqreq_list.remove(code)
+        
+    elif request_type == "add edge":
+        from_node = request.args.get("from_node")
+        to_node = request.args.get("to_node")
+
+        if to_node in prereqs:
+            prereqs[to_node].append(from_node)
+        else:
+            prereqs[to_node] = [from_node]
+
+        
+
+    elif request_type == "delete edge":
+        from_node = request.args.get("from_node")
+        to_node = request.args.get("to_node")
+
+        prereqs[to_node].remove(from_node)
+
+
+    session['details_data'] = details
+    session["prereqs_data"] = prereqs
+    session.modified = True
+
+    return jsonify(status="success", message="Modification made successfully")
+    
+
+
 
 
 if __name__ == '__main__':
