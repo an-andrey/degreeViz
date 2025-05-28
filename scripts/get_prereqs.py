@@ -41,4 +41,21 @@ def get_prereq_list(major_name, major_courses_data):
         resolved_prereqs = json.loads(text_response.replace("'", '"'))
         return resolved_prereqs
     except Exception as e:
-        return f"Error: {e}\nResponse from Gemini: {response.text}"
+        # try one more time just in case if something is wrong
+        try:
+            response = model.generate_content(prompt)
+            text_response = response.text.strip()
+
+            # Clean up markdown blocks and attempt to parse
+            if text_response.startswith("```python"):
+                text_response = text_response[len("```python"):].strip()
+            if text_response.startswith("```json"):
+                text_response = text_response[len("```json"):].strip()
+            if text_response.endswith("```"):
+                text_response = text_response[:-len("```")].strip()
+
+            resolved_prereqs = json.loads(text_response.replace("'", '"'))
+            return resolved_prereqs
+    
+        except Exception as e:
+            return f"Error: {e}\nResponse from Gemini: {response.text}"
