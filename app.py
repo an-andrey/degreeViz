@@ -1,12 +1,17 @@
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 import json, os
+from flask_session import Session
 #importing scripts
 from scripts import get_program_codes, get_prereqs, prepare_data, utils
 from datetime import datetime
 
 app = Flask(__name__)
-app.secret_key = "test"
+app.config["SECRET_KEY"] = "test"
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_PERMANENT"] = False
+app.config["SESSION_USE_SIGNER"] = True
 
+Session(app)
 
 courses_info = {}
 with open('static/json/courses_info.json', 'r', encoding='utf-8') as f:
