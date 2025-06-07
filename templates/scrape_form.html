@@ -202,7 +202,7 @@
         <h2>Create a New Plan</h2>
         <form
           id="scrapeForm"
-          action="{{ url_for('scrape_route') }}"
+          action="{{ url_for('scrape_form') }}"
           method="GET"
         >
           <label for="programSearch">Search for your Program:</label>
@@ -237,7 +237,7 @@
         <h2>Load an Existing Plan</h2>
         <form
           id="loadForm"
-          action="{{ url_for('scrape_route') }}"
+          action="{{ url_for('scrape_form') }}"
           method="POST"
           enctype="multipart/form-data"
         >

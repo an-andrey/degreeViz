@@ -18,7 +18,7 @@ with open('static/json/courses_info.json', 'r', encoding='utf-8') as f:
     courses_info = json.load(f)
 
 @app.route('/', methods=['GET', "POST"])
-def scrape_route():
+def scrape_form():
     
     #adding a log for each user query
     user_ip = request.remote_addr
@@ -306,9 +306,6 @@ def handle_add_node_via_redirect():
     session.modified = True
 
     return jsonify(status="success", message="Modification made successfully")
-    
-
-
 
 
 if __name__ == '__main__':
