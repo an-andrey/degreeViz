@@ -89,7 +89,7 @@ export function getVisNetworkOptions(nodes, edges) {
 
         const queryParams = new URLSearchParams({
           request: "add node",
-          code: nodeIdToDelete,
+          code: id,
           title: title,
           credits: credits,
           semesters_offered: semesters,
@@ -97,7 +97,18 @@ export function getVisNetworkOptions(nodes, edges) {
           y: nodeData.y,
         }).toString();
 
-        window.location.href = `/modify_graph?${queryParams}`;
+        callback(null);
+
+        fetch(`/modify_graph?${queryParams}`, {
+          method: "GET", // Or 'POST'
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+        }).then((response) => {
+          if (response.ok) {
+            window.location.href = response.url;
+          } else {
+            console.log("failed to add node");
+          }
+        });
       },
       editNode: function (nodeData, callback) {
         const newTitle = prompt("Edit course title:", nodeData.original_title);

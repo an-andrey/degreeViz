@@ -220,7 +220,7 @@ def add_program_to_graph():
     return redirect(url_for('view_graph'))
 
 @app.route('/modify_graph', methods=['GET']) 
-def handle_add_node_via_redirect():
+def modify_nodes():
 
     if not session.get('graph_data_available'):
         # If no base graph, perhaps redirect to form with an error
@@ -230,8 +230,7 @@ def handle_add_node_via_redirect():
     details = session.get('details_data', {})
     prereqs = session.get("prereqs_data", {})
 
-    print(f"got {request_type} request")
-    
+
     #Fro some reason, not able to add node on client side, so refreshing page with new info manually
     if request_type == "add node":
         # Extract data from query parameters
@@ -251,10 +250,14 @@ def handle_add_node_via_redirect():
             "y": y,
             "color": utils.parse_semester_to_color(semesters_offered)
         }
+        
+        prereqs[code] = []
 
         session['details_data'] = details
-        session.modified = True
+        session['prereqs_data'] = prereqs
 
+        session.modified = True
+        print("updated session after adding node")
         return redirect(url_for('view_graph'))
 
     #The rest of the requests are made using asynchronous AJAX requests, info updated with session only on refresh
