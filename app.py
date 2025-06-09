@@ -236,7 +236,7 @@ def modify_nodes():
         # Extract data from query parameters
         code = request.args.get('code')
         credits = request.args.get('credits', "N/A")
-        title = request.args.get("node_title")
+        title = request.args.get("title")
         semesters_offered = request.args.get('semesters_offered', "Unknown")
         x = request.args.get('x')
         y = request.args.get('y')
