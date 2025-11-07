@@ -1,4 +1,4 @@
-import google.generativeai as genai
+from google import genai
 import json
 import os
 from dotenv import load_dotenv
@@ -9,12 +9,9 @@ def get_prereq_list(major_name, major_courses_data):
     # Access the API key from Colab secrets
     load_dotenv()
 
-    api_key = os.getenv("GEMINI_API_KEY")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    client = genai.Client()
 
-    genai.configure(api_key=api_key) # Configure the API with the retrieved key
-
-
-    model = genai.GenerativeModel('gemini-1.5-flash') # Recommended model for efficiency
     courses_json_string = json.dumps(major_courses_data, indent=None, separators=(',', ':')) # Even more compact JSON
     
     prompt = f"""
@@ -26,8 +23,12 @@ def get_prereq_list(major_name, major_courses_data):
     {courses_json_string} 
     """
 
-    try:
-        response = model.generate_content(prompt)
+    try:   
+        response = client.models.generate_content(
+            model='gemini-2.0-flash',
+            contents=prompt
+        )
+
         text_response = response.text.strip()
 
         # Clean up markdown blocks and attempt to parse
@@ -43,7 +44,11 @@ def get_prereq_list(major_name, major_courses_data):
     except Exception as e:
         # try one more time just in case if something is wrong
         try:
-            response = model.generate_content(prompt)
+            response = client.models.generate_content(
+                model='gemini-2.0-flash',
+                contents=prompt
+            )
+
             text_response = response.text.strip()
 
             # Clean up markdown blocks and attempt to parse
