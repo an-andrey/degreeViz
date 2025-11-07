@@ -1,3 +1,6 @@
+#Small helper functions to be used across the app.
+
+
 #Make sure to update the function defined in scripts.js too
 def parse_semester_to_color(semester_text):
     if not isinstance(semester_text, str): return "LightGray"

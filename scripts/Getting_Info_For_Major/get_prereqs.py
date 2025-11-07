@@ -3,18 +3,17 @@ import json
 import os
 from dotenv import load_dotenv
 
-
-#returns (hopefully) a dictionnary of the pre-requisities
+#Given the title of the major (inputted from the user), and the major_courses_data which contains all courses of the major with the prereqs for each course
+#written in natural language, this converts it using Gemini API to clean structured array of prereqs for each class of the major.
 def get_prereq_list(major_name, major_courses_data):
-    # Access the API key from Colab secrets
     load_dotenv()
 
     api_key = os.getenv("GEMINI_API_KEY")
 
-    genai.configure(api_key=api_key) # Configure the API with the retrieved key
+    genai.configure(api_key=api_key)
 
 
-    model = genai.GenerativeModel('gemini-1.5-flash') # Recommended model for efficiency
+    model = genai.GenerativeModel('gemini-1.5-flash')
     courses_json_string = json.dumps(major_courses_data, indent=None, separators=(',', ':')) # Even more compact JSON
     
     prompt = f"""
