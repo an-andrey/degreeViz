@@ -10,7 +10,7 @@ def get_prereq_list(major_name, major_courses_data):
     load_dotenv()
 
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    client = genai.Client()
+    client = genai.Client(api_key=GEMINI_API_KEY)
 
     courses_json_string = json.dumps(major_courses_data, indent=None, separators=(',', ':')) # Even more compact JSON
     
@@ -22,12 +22,15 @@ def get_prereq_list(major_name, major_courses_data):
     The pre-reqs should only be course codes, drop anything that is not a course code.
     {courses_json_string} 
     """
-
-    try:   
-        response = client.models.generate_content(
-            model='gemini-2.0-flash',
-            contents=prompt
-        )
+    response = ""
+    try:
+        try:  
+            response = client.models.generate_content(
+                model='gemini-2.5-flash-lite',
+                contents=prompt
+            )
+        except Exception as e: 
+            return "There was an error with contacting Gemini"
 
         text_response = response.text.strip()
 
@@ -42,25 +45,4 @@ def get_prereq_list(major_name, major_courses_data):
         resolved_prereqs = json.loads(text_response.replace("'", '"'))
         return resolved_prereqs
     except Exception as e:
-        # try one more time just in case if something is wrong
-        try:
-            response = client.models.generate_content(
-                model='gemini-2.0-flash',
-                contents=prompt
-            )
-
-            text_response = response.text.strip()
-
-            # Clean up markdown blocks and attempt to parse
-            if text_response.startswith("```python"):
-                text_response = text_response[len("```python"):].strip()
-            if text_response.startswith("```json"):
-                text_response = text_response[len("```json"):].strip()
-            if text_response.endswith("```"):
-                text_response = text_response[:-len("```")].strip()
-
-            resolved_prereqs = json.loads(text_response.replace("'", '"'))
-            return resolved_prereqs
-    
-        except Exception as e:
-            return f"Error: {e}\nResponse from Gemini: {response.text}"
+        return f"Error: {e}\nResponse from Gemini: {response}"
