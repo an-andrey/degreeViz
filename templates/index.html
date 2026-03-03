@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -35,7 +35,12 @@
   <body>
     <div class="page-container">
       <header class="clickable-header">
-        <h1 id="homeLink" data-url="{{ url_for('scrape_form') }}">DegreeViz</h1>
+        <a
+          href="{{ url_for('scrape_form') }}"
+          style="text-decoration: none; color: inherit"
+        >
+          <h1>DegreeViz</h1>
+        </a>
       </header>
       <div class="custom-manipulation-buttons">
         <button id="exportGraphBtn">Export Graph (JSON)</button>
