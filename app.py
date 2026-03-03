@@ -2,9 +2,9 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify, s
 import json, os
 from flask_session import Session
 #importing scripts
-from scripts.Getting_Info_For_Major import get_courses_of_major, get_info_for_major, get_prereqs
+from scripts.Getting_Info_For_Major import get_courses_of_major, get_information_for_major, get_prereqs
 from scripts import utils
-from scripts.app_functions import json_graph_file_handling, log_entry
+from scripts.app_functions import json_graph_file_handling, logging
 from datetime import datetime
 
 app = Flask(__name__)
@@ -22,7 +22,7 @@ with open('static/json/courses_info.json', 'r', encoding='utf-8') as f:
 @app.route('/', methods=['GET', "POST"]) #home page
 def scrape_form():
     #adding a log for each user query
-    log_entry(request, "accessing home page")
+    logging.log_entry(request, "accessing home page")
 
     action = request.args.get('action')
     if request.method == 'POST' and action == "Load Graph": # when a user uploads a JSON file
@@ -48,7 +48,7 @@ def scrape_form():
     major = request.args.get("programSearch")
     
     if action == "Visualize Program": 
-        courses_prereqs_data, processed_details_data = get_info_for_major.process_program_data(url, major) #scrape the major's site and grab all info
+        courses_prereqs_data, processed_details_data = get_information_for_major.process_program_data(url, major) #scrape the major's site and grab all info
         
         #Saving the variable to session
         session['prereqs_data'] = courses_prereqs_data
@@ -77,7 +77,7 @@ def view_graph():
     if session.get('graph_data_available'): #see if there's a saved graph
         prereqs = session.get('prereqs_data', {})
         details = session.get('details_data', {})
-        log_entry(request, "displaying graph")
+        logging.log_entry(request, "displaying graph")
         return render_template('index.html', prereqs=prereqs, details=details)
     else:
         # If no data, redirect back to home page
@@ -97,10 +97,10 @@ def add_program_to_graph():
     new_program_url = request.args.get('url')
     new_program_name = request.args.get('programSearch') # From add_network_form.html
 
-    log_entry(request, f"adding program {new_program_name} (url: {new_program_url}) to graph")    
+    logging.log_entry(request, f"adding program {new_program_name} (url: {new_program_url}) to graph")    
 
     # Fetch and process data for the new program
-    new_prereqs, new_details = get_info_for_major.process_program_data(new_program_url, new_program_name)
+    new_prereqs, new_details = get_information_for_major.process_program_data(new_program_url, new_program_name)
 
     if new_prereqs is None or new_details is None:
         return render_template('add_network_form.html', error=f"Could not process data for {new_program_name}.")

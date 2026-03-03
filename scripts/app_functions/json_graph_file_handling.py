@@ -1,5 +1,5 @@
 import json
-import utils
+from scripts import utils
 
 #parsing user inputted json for their graph
 def parse_json_graph_file(file):

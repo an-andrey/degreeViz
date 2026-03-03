@@ -5,7 +5,13 @@ from bs4 import BeautifulSoup
 #Eventually this could be ran on all programs and be hard-coded instead of running on every query
 
 def get_program_codes(url):
-    res = requests.get(url)
+
+    #Passing a header to mimic a real user instead
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+    }
+
+    res = requests.get(url, headers=headers)
     soup = BeautifulSoup(res.text, 'html.parser')
 
     #finding all required courses: 

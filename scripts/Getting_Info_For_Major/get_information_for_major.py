@@ -1,4 +1,5 @@
-from scripts import get_courses_of_major, get_prereqs, utils
+from scripts.Getting_Info_For_Major import get_courses_of_major, get_prereqs
+from scripts import utils
 import json
 
 #Given the link from provided from the programs.json file, it grabs all the courses of the major, and compiles all the info for each course.
@@ -43,7 +44,7 @@ def process_program_data(program_url, major):
                     "semesters_offered": "Unknown",
                 }
 
-                  # Querying Gemini to get pre-req list
+        # Querying Gemini to get pre-req list
         # Ensure gemini_data is not empty before calling get_prereq_list
         courses_prereqs_data = {}
         if gemini_data:

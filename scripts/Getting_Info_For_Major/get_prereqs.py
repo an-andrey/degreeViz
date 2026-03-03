@@ -1,19 +1,17 @@
-import google.generativeai as genai
+from google import genai
 import json
 import os
 from dotenv import load_dotenv
 
-#Given the title of the major (inputted from the user), and the major_courses_data which contains all courses of the major with the prereqs for each course
-#written in natural language, this converts it using Gemini API to clean structured array of prereqs for each class of the major.
+
+#returns (hopefully) a dictionnary of the pre-requisities
 def get_prereq_list(major_name, major_courses_data):
+    # Access the API key from Colab secrets
     load_dotenv()
 
-    api_key = os.getenv("GEMINI_API_KEY")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    client = genai.Client(api_key=GEMINI_API_KEY)
 
-    genai.configure(api_key=api_key)
-
-
-    model = genai.GenerativeModel('gemini-1.5-flash')
     courses_json_string = json.dumps(major_courses_data, indent=None, separators=(',', ':')) # Even more compact JSON
     
     prompt = f"""
@@ -24,9 +22,16 @@ def get_prereq_list(major_name, major_courses_data):
     The pre-reqs should only be course codes, drop anything that is not a course code.
     {courses_json_string} 
     """
-
+    response = ""
     try:
-        response = model.generate_content(prompt)
+        try:  
+            response = client.models.generate_content(
+                model='gemini-2.5-flash-lite',
+                contents=prompt
+            )
+        except Exception as e: 
+            return "There was an error with contacting Gemini"
+
         text_response = response.text.strip()
 
         # Clean up markdown blocks and attempt to parse
@@ -40,21 +45,4 @@ def get_prereq_list(major_name, major_courses_data):
         resolved_prereqs = json.loads(text_response.replace("'", '"'))
         return resolved_prereqs
     except Exception as e:
-        # try one more time just in case if something is wrong
-        try:
-            response = model.generate_content(prompt)
-            text_response = response.text.strip()
-
-            # Clean up markdown blocks and attempt to parse
-            if text_response.startswith("```python"):
-                text_response = text_response[len("```python"):].strip()
-            if text_response.startswith("```json"):
-                text_response = text_response[len("```json"):].strip()
-            if text_response.endswith("```"):
-                text_response = text_response[:-len("```")].strip()
-
-            resolved_prereqs = json.loads(text_response.replace("'", '"'))
-            return resolved_prereqs
-    
-        except Exception as e:
-            return f"Error: {e}\nResponse from Gemini: {response.text}"
+        return f"Error: {e}\nResponse from Gemini: {response}"
