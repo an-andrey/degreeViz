@@ -18,7 +18,6 @@ def get_program_codes(url):
     course_codes = soup.find_all("td", class_="codecol")
     course_codes = [code.get_text(strip=True) for code in course_codes]
     
-    return None
     return course_codes
 
     
