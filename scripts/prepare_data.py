@@ -13,7 +13,7 @@ with open('static/json/honours_matches.json', 'r', encoding='utf-8') as f:
 def process_program_data(program_url, major):
     try:
         course_codes = get_program_codes.get_program_codes(program_url)
-        if not course_codes:
+        if course_codes == [] or course_codes is None:
             print(f"No course codes found for URL: {program_url}")
             return None, None
 
@@ -41,7 +41,7 @@ def process_program_data(program_url, major):
                     "semesters_offered": "Unknown",
                 }
 
-                  # Querying Gemini to get pre-req list
+        # Querying Gemini to get pre-req list
         # Ensure gemini_data is not empty before calling get_prereq_list
         courses_prereqs_data = {}
         if gemini_data:
@@ -81,7 +81,7 @@ def process_program_data(program_url, major):
                 if major[:7] == "Honours" and prereq_code in honours_matches:
                     courses_prereqs_data[course_code_prereq][i] = honours_matches[prereq_code]
                     
- 
+
             # Ensure all prereqs for each course also have all info
             for prereq_item in courses_prereqs_data[course_code_prereq]:
                 if prereq_item not in course_details_full:
