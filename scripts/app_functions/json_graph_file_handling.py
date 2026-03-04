@@ -19,7 +19,7 @@ def parse_json_graph_file(file):
 def process_json_graph_file(file):
     loaded_data = json.load(file) # Parse the JSON file stream
 
-    # Prepare data structures for graph_view.html
+    # Prepare data structures for graph.html
     prereqs_data = {}
     details_data = {}
 

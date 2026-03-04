@@ -113,7 +113,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 5. Handle Main Email Auth Button
   primaryAuthBtn.addEventListener("click", async () => {
-    e.preventDefault(); //prevents the form loading before the user token is acquired from supabase
+    // e.preventDefault(); //prevents the form loading before the user token is acquired from supabase
 
     const email = emailInput.value;
     const password = passwordInput.value;
@@ -158,10 +158,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Smart Redirect: If looking at a graph, kick to home
     const currentPath = window.location.pathname;
-    if (
-      currentPath.includes("view_graph") ||
-      currentPath.includes("saved_graphs")
-    ) {
+    if (currentPath.includes("graph") || currentPath.includes("saved_graphs")) {
       window.location.href = "/";
     }
   });

@@ -85,7 +85,7 @@ def scrape_form():
                 session['details_data'] = details_data
                 session['graph_data_available'] = True
 
-                return redirect("view_graph")
+                return redirect("graph")
 
     url = request.args.get('url')
     major = request.args.get("programSearch")
@@ -98,7 +98,7 @@ def scrape_form():
         session['details_data'] = processed_details_data
         session['graph_data_available'] = True
 
-        return redirect("view_graph")
+        return redirect("graph")
 
     else:
         # Default action if no specific button was identified (e.g. initial GET request)
@@ -116,12 +116,12 @@ def scrape_form():
             return render_template('scrape_form.html', error="Please select a valid action.")
 
 @app.route("/graph", methods=["GET","POST"]) #main route where graph is displayed
-def view_graph(): 
+def graph(): 
     if session.get('graph_data_available'): #see if there's a saved graph
         prereqs = session.get('prereqs_data', {})
         details = session.get('details_data', {})
         logging.log_entry(request, "displaying graph")
-        return render_template('graph_view.html', prereqs=prereqs, details=details)
+        return render_template('graph.html', prereqs=prereqs, details=details)
     else:
         # If no data, redirect back to home page
         return redirect(url_for('scrape_form'))
@@ -174,7 +174,7 @@ def add_program_to_graph():
     session['details_data'] = current_details
     session['graph_data_available'] = True 
 
-    return redirect(url_for('view_graph'))
+    return redirect(url_for('graph'))
 
 @app.route('/modify_graph', methods=['GET']) 
 def modify_nodes():
@@ -215,7 +215,7 @@ def modify_nodes():
 
         session.modified = True
         print("updated session after adding node")
-        return redirect(url_for('view_graph'))
+        return redirect(url_for('graph'))
 
     #The rest of the requests are made using asynchronous AJAX requests, info updated with session only on refresh
     elif request_type == "edit node":
@@ -361,7 +361,7 @@ def load_graph():
             session['graph_data_available'] = True
             
             logging.log_entry(request, f"opened saved graph '{graph.get('schedule_name')}'")
-            return redirect(url_for('view_graph'))
+            return redirect(url_for('graph'))
             
     except Exception as e:
         print(f"Error loading graph: {e}")
