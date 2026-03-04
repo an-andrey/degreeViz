@@ -78,7 +78,7 @@ def view_graph():
         prereqs = session.get('prereqs_data', {})
         details = session.get('details_data', {})
         logging.log_entry(request, "displaying graph")
-        return render_template('index.html', prereqs=prereqs, details=details)
+        return render_template('graph_view.html', prereqs=prereqs, details=details)
     else:
         # If no data, redirect back to home page
         return redirect(url_for('scrape_form'))

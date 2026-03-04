@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}DegreeViz{% endblock %}</title>
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='favicon.png') }}"
+      type="image/png"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-RH00BZSXVM"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-RH00BZSXVM");
+    </script>
+
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <header class="main-header">
+      <div class="header-content">
+        <a href="{{ url_for('scrape_form') }}" class="logo-link">
+          <h1>DegreeViz</h1>
+        </a>
+        <div class="user-menu" id="userMenu">
+          <button class="auth-btn">Log In</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-container">{% block content %}{% endblock %}</main>
+
+    <footer class="main-footer">
+      <p>
+        Due to ambiguous prerequisites in the Course Catalogue, some
+        prerequisites might be incorrect or missing, please always double check
+        with
+        <a href="https://coursecatalogue.mcgill.ca/courses/" target="_blank"
+          >McGill's Course Catalogue</a
+        >
+        to ensure correct information.
+      </p>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+  </body>
+</html>
