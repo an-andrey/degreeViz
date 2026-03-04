@@ -36,7 +36,28 @@
           <h1>DegreeViz</h1>
         </a>
         <div class="user-menu" id="userMenu">
-          <button class="auth-btn">Log In</button>
+        <button id="loginBtn" class="auth-btn">Log In</button>
+
+        <div id="loggedInMenu" class="dropdown-wrapper" style="display: none">
+          <button id="profileBtn" class="profile-btn">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="profile-icon"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </button>
+          <div id="dropdownContent" class="dropdown-content">
+            <a href="{{url_for('saved_graphs')}}" id="viewGraphsBtn">View Saved Graphs</a>
+            <div class="dropdown-divider"></div>
+            <button id="logoutActionBtn" class="dropdown-item-btn">
+              Log Out
+            </button>
+          </div>
         </div>
       </div>
     </header>
@@ -53,8 +74,83 @@
         >
         to ensure correct information.
       </p>
+
+      <p style="margin-top: 10px;">
+        <a href="{{ url_for('terms_of_service') }}">Terms of Service & Privacy Policy</a>
+      </p>
     </footer>
 
+    <!-- OAuth form  -->
+    <div id="authModal" class="modal-overlay">
+      <div class="modal-content auth-card">
+        <span class="close-modal" id="closeModal">&times;</span>
+        <h3 id="authTitle">Log In</h3>
+
+        <form id="emailAuthForm" onsubmit="event.preventDefault()">
+          <div class="input-group">
+            <label for="emailInput">Email</label>
+            <input
+              type="email"
+              id="emailInput"
+              placeholder="mail@mail.mcgill.ca"
+              required
+            />
+          </div>
+
+          <div class="input-group">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <label for="passwordInput">Password</label>
+              <button type="button" id="forgotPasswordBtn" class="text-link" style="font-size: 0.85em; margin: 0;">Forgot Passoword?</button>
+            </div>
+            <input
+              type="password"
+              id="passwordInput"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <button
+            type="button"
+            id="primaryAuthBtn"
+            class="action-button primary-auth-btn"
+          >
+            Log In
+          </button>
+
+          <div class="auth-switch">
+            <span id="authSwitchText">Don't have an account?</span>
+            <button type="button" id="authSwitchLink" class="text-link">
+              Sign Up
+            </button>
+          </div>
+
+          <p id="authMessage" class="auth-message"></p>
+        </form>
+
+        <!-- <div class="divider"><span>OR</span></div> -->
+
+        <button id="googleLoginBtn" class="social-btn google-btn" hidden>
+          <img
+            src="https://www.svgrepo.com/show/475656/google-color.svg"
+            alt="Google"
+            class="google-icon"
+          />
+          Continue with Google
+        </button>
+      </div>
+    </div>
+
+    <!-- supabase auth scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      // Injected from Flask .env
+      window.SUPABASE_CONFIG = {
+        supabase_url: "{{ supabase_url }}",
+        supabase_key: "{{ supabase_key }}",
+      };
+    </script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     {% block scripts %}{% endblock %}
   </body>
 </html>

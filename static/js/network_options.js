@@ -1,5 +1,6 @@
 // filepath: c:\Users\anamb\OneDrive\Desktop\Code\python\degreeViz\static\js\visNetworkOptions.js
 import { parseSemesterToColor } from "./utils.js";
+import { markGraphDirty } from "./ui_handler.js";
 
 export function getVisNetworkOptions(nodes, edges) {
   return {
@@ -79,7 +80,7 @@ export function getVisNetworkOptions(nodes, edges) {
         const credits = prompt("Enter credits:", "3");
         const semesters = prompt(
           "Enter semesters offered (e.g., Fall, Winter):",
-          "Fall"
+          "Fall",
         );
 
         // Handle cases where user cancels prompts
@@ -104,6 +105,7 @@ export function getVisNetworkOptions(nodes, edges) {
           headers: { "X-Requested-With": "XMLHttpRequest" },
         }).then((response) => {
           if (response.ok) {
+            markGraphDirty(); // allow graph to update
             window.location.href = response.url;
           } else {
             console.log("failed to add node");
@@ -115,7 +117,7 @@ export function getVisNetworkOptions(nodes, edges) {
         const newCredits = prompt("Edit credits:", nodeData.original_credits);
         const newSemesters = prompt(
           "Edit semesters offered:",
-          nodeData.original_semesters_offered
+          nodeData.original_semesters_offered,
         );
         if (newTitle === null || newCredits === null || newSemesters === null)
           return callback(null);
@@ -140,13 +142,19 @@ export function getVisNetworkOptions(nodes, edges) {
         fetch(`/modify_graph?${queryParams}`, {
           method: "GET", // Or 'POST'
           headers: { "X-Requested-With": "XMLHttpRequest" },
+        }).then((response) => {
+          if (response.ok) {
+            markGraphDirty(); // allow graph to update
+          } else {
+            console.log("failed to edit node");
+          }
         });
       },
       deleteNode: function (dataToDelete, callback) {
         const nodeIdToDelete = dataToDelete.nodes[0];
         if (!nodeIdToDelete || !nodes.get(nodeIdToDelete)) {
           console.warn(
-            `Node ${nodeIdToDelete} not found or invalid for deletion.`
+            `Node ${nodeIdToDelete} not found or invalid for deletion.`,
           );
           return callback(null);
         }
@@ -162,6 +170,12 @@ export function getVisNetworkOptions(nodes, edges) {
         fetch(`/modify_graph?${queryParams}`, {
           method: "GET", // Or 'POST'
           headers: { "X-Requested-With": "XMLHttpRequest" },
+        }).then((response) => {
+          if (response.ok) {
+            markGraphDirty(); // allow graph to update
+          } else {
+            console.log("failed to delete node");
+          }
         });
       },
       addEdge: function (edgeData, callback) {
@@ -212,6 +226,12 @@ export function getVisNetworkOptions(nodes, edges) {
           headers: {
             "X-Requested-With": "XMLHttpRequest", // Often used to identify AJAX requests
           },
+        }).then((response) => {
+          if (response.ok) {
+            markGraphDirty(); // allow graph to update
+          } else {
+            console.log("failed to add edge");
+          }
         });
       },
       deleteEdge: function (dataToDelete, callback) {
@@ -256,6 +276,12 @@ export function getVisNetworkOptions(nodes, edges) {
           headers: {
             "X-Requested-With": "XMLHttpRequest",
           },
+        }).then((response) => {
+          if (response.ok) {
+            markGraphDirty(); // allow graph to update
+          } else {
+            console.log("failed to edit node");
+          }
         });
       },
     },

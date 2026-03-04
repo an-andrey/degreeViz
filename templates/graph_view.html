@@ -9,6 +9,7 @@
 </script>
 
 <div class="custom-manipulation-buttons">
+  <button id="saveGraphBtn">Save Graph to Profile</button>
   <button id="exportGraphBtn">Export Graph (JSON)</button>
   <a href="{{url_for('add_program_form')}}" style="text-decoration: none">
     <button id="addProgramToGraphBtn" type="button">
@@ -22,6 +23,7 @@
 <script type="text/javascript">
   const prereqsData = {{ prereqs|tojson }};
   const detailsData = {{ details|tojson }};
+  const serverScheduleId = {{ session.get('schedule_id') | tojson | safe }};
 </script>
 {% endblock %} {% block scripts %}
 <script

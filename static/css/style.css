@@ -337,7 +337,7 @@ button:disabled {
 /* Constrain the width so it doesn't stretch across the whole monitor */
 .form-card.single-card {
   width: 100%;
-  max-width: 480px;
+  max-width: 800px;
 }
 
 /* Thicker black border for high contrast */
@@ -495,4 +495,442 @@ button:disabled {
   margin: 0 10px 0 2px !important;
   display: inline-block !important;
   vertical-align: middle !important; /* Centers the line with the buttons */
+}
+
+/* --- Modal Overlay --- */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(3px); /* Gives a modern feel */
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+}
+
+/* --- Modal Content Box (Matches .form-card style) --- */
+.auth-card {
+  background-color: var(--surface-color);
+  padding: 35px 40px;
+  border: 2px solid var(--text-main) !important;
+  border-radius: 8px;
+  width: 100%;
+  max-width: 480px;
+  position: relative;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* The McGill red stripe at the top */
+.auth-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 12px;
+  background-color: var(--mcgill-red);
+}
+
+.auth-card h3 {
+  color: var(--text-main);
+  text-align: center;
+  font-size: 1.6em;
+  margin-bottom: 25px;
+  margin-top: 5px;
+  border-bottom: none; /* Override standard form-card h3 */
+  padding-bottom: 0;
+}
+
+.close-modal {
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  font-size: 28px;
+  cursor: pointer;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.close-modal:hover {
+  color: var(--text-main);
+}
+
+/* --- Inputs --- */
+.input-group {
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.input-group label {
+  color: var(--text-muted);
+  font-weight: 500;
+  font-size: 0.9em;
+}
+
+#emailAuthForm input[type="email"],
+#emailAuthForm input[type="password"] {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-size: 1em;
+  background-color: var(--bg-color);
+  box-sizing: border-box;
+}
+
+#emailAuthForm input:focus {
+  outline: none;
+  border-color: var(--mcgill-red);
+}
+
+/* --- Buttons --- */
+.primary-auth-btn {
+  width: 100%;
+  background-color: var(--mcgill-red) !important; /* Force red */
+  padding: 12px;
+  font-size: 1.05em;
+  margin-right: 0;
+  margin-top: 5px;
+}
+
+.primary-auth-btn:hover {
+  background-color: var(--mcgill-red-hover) !important;
+}
+
+/* Switch between Log In / Sign Up */
+.auth-switch {
+  margin-top: 15px;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.text-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--mcgill-red);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 1em;
+  margin-left: 5px;
+}
+.text-link:hover {
+  text-decoration: underline;
+  background: none;
+  color: var(--mcgill-red-hover);
+}
+
+/* --- OR Divider --- */
+.divider {
+  margin: 25px 0;
+  border-bottom: 1px solid var(--border-color);
+  position: relative;
+}
+
+.divider span {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface-color);
+  padding: 0 15px;
+  color: var(--text-muted);
+  font-size: 0.85em;
+  font-weight: 500;
+}
+
+/* --- Google Button --- */
+.google-btn {
+  width: 100%;
+  background-color: #fff;
+  color: var(--text-main);
+  border: 1px solid var(--border-color);
+  padding: 10px;
+  font-size: 1em;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background-color 0.2s;
+}
+
+.google-btn:hover {
+  background-color: var(--bg-color);
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+}
+.auth-message {
+  margin-top: 15px;
+  font-size: 0.9em;
+  color: var(--error-text);
+  text-align: center;
+}
+
+/* --- Profile Dropdown Menu --- */
+.dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.profile-btn {
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.profile-btn:hover {
+  border-color: var(--mcgill-red);
+  color: var(--mcgill-red);
+  background-color: var(--surface-color);
+}
+
+.profile-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 120%;
+  background-color: var(--surface-color);
+  min-width: 200px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+/* Show the dropdown when the profile button is clicked */
+.dropdown-wrapper.active .dropdown-content {
+  display: block;
+}
+
+.dropdown-header {
+  padding: 12px 16px;
+  font-size: 0.85em;
+  color: var(--text-muted);
+  background-color: var(--bg-color);
+  border-bottom: 1px solid var(--border-color);
+  word-break: break-all;
+}
+
+.dropdown-content a,
+.dropdown-item-btn {
+  color: var(--text-main);
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+  font-size: 0.95em;
+  background: none;
+  border: none;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  margin: 0;
+}
+
+.dropdown-content a:hover,
+.dropdown-item-btn:hover {
+  background-color: var(--error-bg);
+  color: var(--mcgill-red);
+}
+
+.dropdown-divider {
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 0;
+}
+
+/* --- Specific Styling for Log Out Button --- */
+#logoutActionBtn {
+  color: var(--error-text);
+  font-weight: 600;
+}
+
+#logoutActionBtn:hover {
+  background-color: var(--error-bg);
+  color: var(--mcgill-red-hover);
+}
+
+/* --- Save Graph Button --- */
+#saveGraphBtn {
+  display: none;
+  background-color: #28a745; /* Success green for Save/Update */
+  transition: all 0.3s ease;
+}
+
+#saveGraphBtn:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+/* "Graph up to date" state */
+#saveGraphBtn:disabled {
+  background-color: var(--border-color) !important;
+  color: var(--text-muted) !important;
+  cursor: default;
+}
+
+/* --- Saved Graphs Dashboard --- */
+.dashboard-container {
+  width: 100%;
+}
+
+.dashboard-header {
+  margin-bottom: 30px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 15px;
+}
+
+.graphs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+/* --- Saved Graphs Cards --- */
+.graph-card {
+  position: relative; /* Anchors the red stripe */
+  background-color: var(--surface-color);
+  padding: 30px 25px 20px 25px;
+  border: 2px solid var(--text-main) !important; /* Thick black border */
+  border-radius: 8px;
+  overflow: hidden; /* Forces the inner red stripe to perfectly match the corners */
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+/* Draws the red stripe seamlessly inside the top border */
+.graph-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 12px;
+  background-color: var(--mcgill-red);
+}
+
+.graph-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  border-color: var(--mcgill-red) !important;
+}
+
+.graph-card h3 {
+  margin-top: 0;
+  margin-bottom: 15px;
+  font-size: 1.3em;
+  color: var(--text-main);
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 12px;
+}
+
+.graph-card-meta {
+  font-size: 0.9em;
+  color: var(--text-muted);
+  margin-bottom: 25px;
+  flex-grow: 1;
+}
+
+.graph-card-meta p {
+  margin: 5px 0;
+}
+
+/* Card Actions */
+/* Card Actions */
+.graph-card-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+  width: 100%;
+}
+
+.action-form {
+  display: flex; /* Makes the form stretch its inner button */
+  margin: 0;
+}
+
+/* Give the Open button more width, just like your original design */
+.open-form {
+  flex: 1;
+}
+
+.delete-form {
+  flex: 1;
+}
+
+.btn-open,
+.btn-delete {
+  width: 100%;
+  padding: 10px 12px; /* Slightly taller for a better click target */
+  border-radius: 4px;
+  font-size: 0.95em;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.btn-open {
+  background-color: var(--text-main);
+  color: #fff;
+  transition: background-color 0.2s ease;
+}
+
+.btn-open:hover {
+  background-color: #333;
+}
+
+.btn-delete {
+  background-color: transparent;
+  color: var(--error-text);
+  border: 1px solid var(--error-text);
+  transition: background-color 0.2s ease;
+}
+
+.btn-delete:hover {
+  background-color: var(--error-bg);
+}
+
+.loading-message,
+.empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
+.mt-15 {
+  margin-top: 15px;
 }

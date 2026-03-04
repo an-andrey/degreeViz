@@ -1,0 +1,92 @@
+{% extends "base.html" %} {% block title %}Terms of Service - DegreeViz{%
+endblock %} {% block content %}
+<script>
+  // Use the centered landing container
+  document.querySelector("main").className = "landing-container";
+</script>
+
+<div class="landing-cards" style="margin-top: 20px">
+  <div
+    class="form-card single-card"
+    style="max-width: 800px; margin: 0 auto; text-align: left"
+  >
+    <h2
+      style="
+        text-align: center;
+        margin-bottom: 30px;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 15px;
+      "
+    >
+      Terms of Service & Privacy Policy
+    </h2>
+
+    <h3>1. Acceptance of Terms</h3>
+    <p style="color: var(--text-muted); margin-bottom: 25px">
+      By accessing and using DegreeViz, you accept and agree to be bound by the
+      terms and provision of this agreement. DegreeViz is an independent
+      student-made tool and is not officially affiliated with or endorsed by
+      McGill University.
+    </p>
+
+    <h3>2. Google Account Data and Privacy</h3>
+    <p style="color: var(--text-muted); margin-bottom: 10px">
+      DegreeViz allows users to sign in using their Google accounts. If you
+      choose to log in via Google, we request access to your basic profile
+      information (specifically, your email address).
+    </p>
+    <ul style="color: var(--text-muted); margin-bottom: 25px; line-height: 1.6">
+      <li>
+        <strong>What we collect:</strong> We solely collect the email address
+        associated with your log-in to create a unique identifier for saving
+        your degree plans.
+      </li>
+      <li>
+        <strong>How we use it:</strong> Your email is used exclusively for
+        authentication purposes and to link your saved course graphs to your
+        specific account.
+      </li>
+      <li>
+        <strong>Data Sharing:</strong> We do not sell, rent, or share your email
+        address or personal data with any third parties.
+      </li>
+    </ul>
+
+    <h3>3. Data Storage</h3>
+    <p style="color: var(--text-muted); margin-bottom: 25px">
+      DegreeViz stores the course graphs you create (including course codes,
+      credits, and layout positions) in our secure database so you can access
+      them later. You can delete your saved graphs at any time from your
+      dashboard, which permanently removes them from our servers.
+    </p>
+
+    <h3>4. Disclaimer of Warranties</h3>
+    <p style="color: var(--text-muted); margin-bottom: 25px">
+      The information provided by DegreeViz is scraped from public university
+      catalogues and is provided "as is". We make no guarantees regarding the
+      accuracy, completeness, or currentness of the prerequisites or course
+      data. Always consult the official McGill Course Catalogue and your
+      academic advisor before making enrollment decisions.
+    </p>
+
+    <div style="text-align: center; margin-top: 40px">
+      <a href="{{ url_for('scrape_form') }}">
+        <button
+          class="primary-btn"
+          style="
+            background-color: var(--mcgill-red);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
+            cursor: pointer;
+          "
+        >
+          Return to Home
+        </button>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

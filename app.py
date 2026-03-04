@@ -1,6 +1,9 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 import json, os
 from flask_session import Session
+from supabase import create_client, Client
+from dotenv import load_dotenv  
+
 #importing scripts
 from scripts.Getting_Info_For_Major import get_courses_of_major, get_information_for_major, get_prereqs
 from scripts import utils
@@ -13,11 +16,51 @@ app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_USE_SIGNER"] = True
 
+USER_SCHEDULES_TABLE_NAME = "userschedules"
+
 Session(app)
+
+#Loading SUPABASE
+load_dotenv()
+
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+SUPABASE_URL = os.environ.get("SUPABASE_URL") 
+
+Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+#Injects Supabase credentials into all Jinja templates automatically
+@app.context_processor
+def inject_supabase_config():
+    return dict(
+        supabase_url=SUPABASE_URL,
+        supabase_key=SUPABASE_KEY
+    )
 
 courses_info = {}
 with open('static/json/courses_info.json', 'r', encoding='utf-8') as f:
     courses_info = json.load(f)
+
+@app.route('/sync_auth', methods=['POST']) # sync js and python with supabase user id
+def sync_auth():
+    data = request.get_json()
+    access_token = data.get('access_token')
+    
+    if access_token:
+        try:
+            # Verify the token is real and get the user ID
+            user_response = Client.auth.get_user(access_token)
+            session['user_id'] = user_response.user.id
+            return jsonify({"status": "success"})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 401
+            
+    return jsonify({"status": "error", "message": "No token provided"}), 400
+
+@app.route('/clear_auth', methods=['POST']) # remove user id from supabase on log-out
+def clear_auth():
+    session.pop('user_id', None)
+    session.pop('schedule_id', None) # Clear any active graph ID
+    return jsonify({"status": "success"})
 
 @app.route('/', methods=['GET', "POST"]) #home page
 def scrape_form():
@@ -72,7 +115,7 @@ def scrape_form():
             session.pop('graph_data_available', None)
             return render_template('scrape_form.html', error="Please select a valid action.")
 
-@app.route("/view_graph", methods=["GET","POST"]) #main route where graph is displayed
+@app.route("/graph", methods=["GET","POST"]) #main route where graph is displayed
 def view_graph(): 
     if session.get('graph_data_available'): #see if there's a saved graph
         prereqs = session.get('prereqs_data', {})
@@ -224,6 +267,136 @@ def modify_nodes():
 
     return jsonify(status="success", message="Modification made successfully")
 
+@app.route('/save_graph_to_db', methods=['POST'])
+def save_graph():
+    #verify the graph got passed with the request
+    if not session.get('graph_data_available'):
+        return jsonify({"status": "error", "message": "No active graph to save."}), 400
+
+    data = request.get_json()
+    access_token = data.get("access_token")
+    schedule_name = data.get("schedule_name", "My Degree Plan")
+    
+    # Check if this graph already exists in the database
+    schedule_id = session.get('schedule_id') 
+
+    if not access_token:
+        return jsonify({"status": "error", "message": "User not authenticated."}), 401
+
+    try:
+        user_response = Client.auth.get_user(access_token)
+        user_id = user_response.user.id
+        
+        prereqs = session.get('prereqs_data', {})
+        details = session.get('details_data', {})
+
+        if schedule_id:
+            # UPDATE EXISTING GRAPH
+            Client.table(USER_SCHEDULES_TABLE_NAME).update({
+                "prereqs_data": prereqs,
+                "details_data": details
+                # Not updating schedule_name here so it keeps its original name, 
+                # but you could add a rename feature later!
+            }).eq("id", schedule_id).eq("user_id", user_id).execute()
+            
+            logging.log_entry(request, f"updated graph '{schedule_id}' in database")
+            return jsonify({"status": "success", "message": "Graph updated successfully!", "schedule_id": schedule_id})
+            
+        else:
+            # INSERT NEW GRAPH
+            response = Client.table(USER_SCHEDULES_TABLE_NAME).insert({
+                "user_id": user_id,
+                "schedule_name": schedule_name,
+                "prereqs_data": prereqs,
+                "details_data": details
+            }).execute()
+
+            # Grab the newly generated UUID and save it to the session
+            new_id = response.data[0]['id']
+            session['schedule_id'] = new_id 
+            
+            logging.log_entry(request, f"saved new graph '{schedule_name}' to database")
+            return jsonify({"status": "success", "message": "Graph saved successfully!", "schedule_id": new_id})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+@app.route('/saved_graphs')
+def saved_graphs():
+    user_id = session.get('user_id')
+    print(user_id)
+    # If Flask doesn't think they are logged in, kick them to home
+    if not user_id:
+        return redirect(url_for('scrape_form'))
+
+    try:
+        # Ask Supabase for this user's graphs, newest first
+        response = Client.table(USER_SCHEDULES_TABLE_NAME).select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        schedules = response.data
+    except Exception as e:
+        print(f"Database error: {e}")
+        schedules = []
+
+    return render_template('saved_graphs.html', schedules=schedules)
+
+@app.route('/load_graph', methods=['POST'])
+def load_graph():
+    schedule_id = request.form.get('schedule_id')
+    user_id = session.get('user_id')
+    
+    if not schedule_id or not user_id:
+        return redirect(url_for('saved_graphs'))
+    
+    try:
+        # Fetch the specific graph's data from Supabase
+        response = Client.table(USER_SCHEDULES_TABLE_NAME).select("*").eq("id", schedule_id).eq("user_id", user_id).execute()
+        
+        if response.data:
+            graph = response.data[0]
+            
+            # Load the data into the Flask session
+            session['prereqs_data'] = graph.get('prereqs_data', {})
+            session['details_data'] = graph.get('details_data', {})
+            session['schedule_id'] = graph.get('id')
+            session['graph_data_available'] = True
+            
+            logging.log_entry(request, f"opened saved graph '{graph.get('schedule_name')}'")
+            return redirect(url_for('view_graph'))
+            
+    except Exception as e:
+        print(f"Error loading graph: {e}")
+    
+    return redirect(url_for('saved_graphs'))
+
+@app.route('/delete_graph', methods=['POST'])
+def delete_graph():
+    data = request.get_json()
+    schedule_id = data.get('schedule_id')
+    user_id = session.get('user_id')
+
+    if not schedule_id or not user_id:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    try:
+        # Delete the graph from Supabase
+        Client.table(USER_SCHEDULES_TABLE_NAME).delete().eq("id", schedule_id).eq("user_id", user_id).execute()
+        
+        # If the user deletes the graph they are currently looking at, clear the session tracking
+        if session.get('schedule_id') == schedule_id:
+            session.pop('schedule_id', None)
+
+        logging.log_entry(request, f"deleted graph '{schedule_id}'")
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+@app.route('/reset_password')
+def reset_password():
+    return render_template('reset_password.html')
+
+@app.route('/terms_of_service') # required for google oauth
+def terms_of_service():
+    return render_template('terms_of_service.html')
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
