@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}DegreeViz{% endblock %}</title>
+    <link
+      rel="icon"
+      href="{{ url_for('static', filename='favicon.png') }}"
+      type="image/png"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-RH00BZSXVM"
+    ></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
+      gtag("config", "G-RH00BZSXVM");
+    </script>
+
+    {% block head %}{% endblock %}
+  </head>
+  <body>
+    <header class="main-header">
+      <div class="header-content">
+        <a href="{{ url_for('scrape_form') }}" class="logo-link">
+          <h1>DegreeViz</h1>
+        </a>
+        <div class="user-menu" id="userMenu">
+        <button id="loginBtn" class="auth-btn">Log In</button>
+
+        <div id="loggedInMenu" class="dropdown-wrapper" style="display: none">
+          <button id="profileBtn" class="profile-btn">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              class="profile-icon"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+          </button>
+          <div id="dropdownContent" class="dropdown-content">
+            <a href="{{url_for('saved_graphs')}}" id="viewGraphsBtn">View Saved Graphs</a>
+            <div class="dropdown-divider"></div>
+            <button id="logoutActionBtn" class="dropdown-item-btn">
+              Log Out
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-container">{% block content %}{% endblock %}</main>
+
+    <footer class="main-footer">
+      <p>
+        Due to ambiguous prerequisites in the Course Catalogue, some
+        prerequisites might be incorrect or missing, please always double check
+        with
+        <a href="https://coursecatalogue.mcgill.ca/courses/" target="_blank"
+          >McGill's Course Catalogue</a
+        >
+        to ensure correct information.
+      </p>
+
+      <p style="margin-top: 10px;">
+        <a href="{{ url_for('terms_of_service') }}">Terms of Service & Privacy Policy</a>
+      </p>
+    </footer>
+
+    <!-- OAuth form  -->
+    <div id="authModal" class="modal-overlay">
+      <div class="modal-content auth-card">
+        <span class="close-modal" id="closeModal">&times;</span>
+        <h3 id="authTitle">Log In</h3>
+
+        <form id="emailAuthForm" onsubmit="event.preventDefault()">
+          <div class="input-group">
+            <label for="emailInput">Email</label>
+            <input
+              type="email"
+              id="emailInput"
+              placeholder="mail@mail.mcgill.ca"
+              required
+            />
+          </div>
+
+          <div class="input-group">
+            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+              <label for="passwordInput">Password</label>
+              <button type="button" id="forgotPasswordBtn" class="text-link" style="font-size: 0.85em; margin: 0;">Forgot Passoword?</button>
+            </div>
+            <input
+              type="password"
+              id="passwordInput"
+              placeholder="••••••••"
+              required
+            />
+          </div>
+
+          <button
+            type="button"
+            id="primaryAuthBtn"
+            class="action-button primary-auth-btn"
+          >
+            Log In
+          </button>
+
+          <div class="auth-switch">
+            <span id="authSwitchText">Don't have an account?</span>
+            <button type="button" id="authSwitchLink" class="text-link">
+              Sign Up
+            </button>
+          </div>
+
+          <p id="authMessage" class="auth-message"></p>
+        </form>
+
+        <div class="divider"><span>OR</span></div>
+
+        <button id="googleLoginBtn" class="social-btn google-btn" hidden>
+          <img
+            src="https://www.svgrepo.com/show/475656/google-color.svg"
+            alt="Google"
+            class="google-icon"
+          />
+          Continue with Google
+        </button>
+      </div>
+    </div>
+
+    <!-- Generic Custom Prompt Modal -->
+    <div id="customPromptModal" class="modal-overlay">
+      <div class="modal-content auth-card form-card" style="max-width: 450px;">
+        <span class="close-modal" id="closePromptModal">&times;</span>
+        <h3 id="promptTitle" style="text-align: center; margin-bottom: 20px; border-bottom: none; padding-bottom: 0; margin-top: 5px;">Prompt Title</h3>
+        
+        <form id="customPromptForm" onsubmit="event.preventDefault();">
+          <div id="promptFieldsContainer">
+            <!-- Dynamic input fields get injected here by JavaScript -->
+          </div>
+          
+          <div class="card-action" style="display: flex; gap: 10px; margin-top: 25px;">
+            <button type="button" id="cancelPromptBtn" style="flex: 1; margin: 0; background-color: transparent; color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 4px; font-weight: 600; cursor: pointer;">Cancel</button>
+            <button type="submit" id="submitPromptBtn" style="flex: 1; margin: 0; background-color: var(--mcgill-red); color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">Submit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- supabase auth scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+      // Injected from Flask .env
+      window.SUPABASE_CONFIG = {
+        supabase_url: "{{ supabase_url }}",
+        supabase_key: "{{ supabase_key }}",
+      };
+
+      window.supabaseClient = window.supabase.createClient(
+        window.SUPABASE_CONFIG.supabase_url, 
+        window.SUPABASE_CONFIG.supabase_key
+      );
+    </script>
+    <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

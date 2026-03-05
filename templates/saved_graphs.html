@@ -1,0 +1,56 @@
+{% extends "base.html" %} {% block title %}My Saved Graphs - DegreeViz{%
+endblock %} {% block content %}
+<div class="dashboard-container">
+  <div class="dashboard-header">
+    <h2>My Degree Plans</h2>
+    <p class="text-muted">
+      Select a plan to continue editing, or create a new one.
+    </p>
+  </div>
+
+  {% if schedules %}
+  <div class="graphs-grid">
+    {% for schedule in schedules %}
+    <div class="graph-card">
+      <h3>{{ schedule.schedule_name }}</h3>
+
+      <div class="graph-card-meta">
+        <p>
+          <strong>Courses:</strong> {{ schedule.details_data.keys() | length }}
+          mapped
+        </p>
+        <p><strong>Created:</strong> {{ schedule.created_at[:10] }}</p>
+      </div>
+
+      <div class="graph-card-actions">
+        <form
+          action="{{ url_for('load_graph') }}"
+          method="POST"
+          class="action-form open-form"
+        >
+          <input type="hidden" name="schedule_id" value="{{ schedule.id }}" />
+          <button type="submit" class="btn-open">Open</button>
+        </form>
+
+        <form class="action-form delete-form">
+          <input type="hidden" name="schedule_id" value="{{ schedule.id }}" />
+          <button type="submit" class="btn-delete">Delete</button>
+        </form>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty-state">
+    <p>You don't have any saved graphs yet.</p>
+    <a href="{{ url_for('scrape_form') }}">
+      <button class="primary-btn mt-15" style="width: auto">
+        Create a New Plan
+      </button>
+    </a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/saved_graphs.js') }}"></script>
+{% endblock %}

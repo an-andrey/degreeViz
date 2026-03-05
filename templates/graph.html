@@ -1,0 +1,33 @@
+{% extends "base.html" %} {% block head %}
+<script
+  type="text/javascript"
+  src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"
+></script>
+{% endblock %} {% block content %}
+<script>
+  document.querySelector(".page-container").classList.add("graph-wrapper");
+</script>
+
+<div class="custom-manipulation-buttons">
+  <button id="saveGraphBtn">Save Graph to Profile</button>
+  <button id="exportGraphBtn">Export Graph (JSON)</button>
+  <a href="{{url_for('add_program_form')}}" style="text-decoration: none">
+    <button id="addProgramToGraphBtn" type="button">
+      Add Another Program to Graph
+    </button>
+  </a>
+</div>
+
+<div id="courseNetwork"></div>
+
+<script type="text/javascript">
+  const prereqsData = {{ prereqs|tojson }};
+  const detailsData = {{ details|tojson }};
+  const serverScheduleId = {{ session.get('schedule_id') | tojson | safe }};
+</script>
+{% endblock %} {% block scripts %}
+<script
+  type="module"
+  src="{{ url_for('static', filename='js/main.js') }}"
+></script>
+{% endblock %}

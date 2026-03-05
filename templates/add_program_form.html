@@ -1,0 +1,38 @@
+{% extends "base.html" %} {% block head %}
+<script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.min.js"></script>
+{% endblock %} {% block title %}Add Program - DegreeViz{% endblock %} {% block
+content %}
+<h2>Add Another Program</h2>
+<form
+  id="addProgramForm"
+  action="{{url_for('add_program_to_graph')}}"
+  method="GET"
+>
+  <label for="programSearch">Search for Program to Add:</label>
+  <input
+    type="text"
+    id="programSearch"
+    name="programSearch"
+    placeholder="e.g., Mathematics Minor (B.Sc.)"
+  />
+  <div
+    id="searchResults"
+    class="search-results-container"
+    style="display: none"
+  ></div>
+
+  <input type="hidden" id="url" name="url" required />
+  <input
+    type="submit"
+    id="addProgramButton"
+    value="Add Program to Graph"
+    disabled
+  />
+</form>
+
+{% if error %}
+<p class="error">{{ error | safe }}</p>
+{% endif %} {% endblock %} {% block scripts %}
+<!-- Fuzzy search for search bar script -->
+<script src="{{ url_for('static', filename='js/search_form.js') }}"></script>
+{% endblock %}

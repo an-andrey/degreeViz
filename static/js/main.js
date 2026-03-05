@@ -1,10 +1,10 @@
-// filepath: c:\Users\anamb\OneDrive\Desktop\Code\python\degreeViz\static\js\main.js
 import { initializeNodes, initializeEdges } from "./data_init.js";
 import { getVisNetworkOptions } from "./network_options.js";
 import {
   setupHomeLinkHandler,
   setupExportButtonHandler,
   initialLayoutAdjustment,
+  setupSaveButtonHandler,
 } from "./ui_handler.js";
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -13,7 +13,7 @@ document.addEventListener("DOMContentLoaded", function () {
     typeof detailsData === "undefined"
   ) {
     console.error(
-      "Data (prereqsData or detailsData) not found. Make sure it's passed correctly from the Flask template."
+      "Data (prereqsData or detailsData) not found. Make sure it's passed correctly from the Flask template.",
     );
     const networkContainer = document.getElementById("courseNetwork");
     if (networkContainer) {
@@ -43,6 +43,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Setup UI Handlers
   setupHomeLinkHandler();
   setupExportButtonHandler(network, nodes, edges);
+  setupSaveButtonHandler();
   initialLayoutAdjustment(network, nodes);
 
   //disable or enable edit mode depending on where you click

@@ -1,8 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, session
 import json, os
 from flask_session import Session
+from supabase import create_client, Client
+from dotenv import load_dotenv  
+
 #importing scripts
-from scripts import get_program_codes, get_prereqs, prepare_data, utils
+from scripts.Getting_Info_For_Major import get_courses_of_major, get_information_for_major, get_prereqs
+from scripts import utils
+from scripts.app_functions import json_graph_file_handling, logging
 from datetime import datetime
 
 app = Flask(__name__)
@@ -11,128 +16,89 @@ app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_USE_SIGNER"] = True
 
+USER_SCHEDULES_TABLE_NAME = "userschedules"
+
 Session(app)
+
+#Loading SUPABASE
+load_dotenv()
+
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+SUPABASE_URL = os.environ.get("SUPABASE_URL") 
+
+Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+#Injects Supabase credentials into all Jinja templates automatically
+@app.context_processor
+def inject_supabase_config():
+    return dict(
+        supabase_url=SUPABASE_URL,
+        supabase_key=SUPABASE_KEY
+    )
 
 courses_info = {}
 with open('static/json/courses_info.json', 'r', encoding='utf-8') as f:
     courses_info = json.load(f)
 
-@app.route('/', methods=['GET', "POST"])
-def scrape_form():
+@app.route('/sync_auth', methods=['POST']) # sync js and python with supabase user id
+def sync_auth():
+    data = request.get_json()
+    access_token = data.get('access_token')
     
+    if access_token:
+        try:
+            # Verify the token is real and get the user ID
+            user_response = Client.auth.get_user(access_token)
+            session['user_id'] = user_response.user.id
+            return jsonify({"status": "success"})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 401
+            
+    return jsonify({"status": "error", "message": "No token provided"}), 400
+
+@app.route('/clear_auth', methods=['POST']) # remove user id from supabase on log-out
+def clear_auth():
+    session.pop('user_id', None)
+    session.pop('schedule_id', None) # Clear any active graph ID
+    return jsonify({"status": "success"})
+
+@app.route('/', methods=['GET', "POST"]) #home page
+def scrape_form():
     #adding a log for each user query
-    user_ip = request.remote_addr
-    timestamp = datetime.now()
+    logging.log_entry(request, "accessing home page")
 
-    if request.args.get("action") == "Scrape and Visualize":
-        print(f"user {user_ip} made a {request.args.get('action')} request for {request.args.get('url')} at {timestamp}")
-    else:
-        print(f"user {user_ip} made a {request.args.get('action')} request at {timestamp}")
-
-
-    if request.method == 'POST':
-
-        # when a user uploads a JSON file
-        action = request.form.get('action')
-        if action == "Load Graph":
-
-            if 'graphFile' not in request.files:
-                return render_template('scrape_form.html', error="No file selected for upload.")
+    action = request.args.get('action')
+    if request.method == 'POST' and action == "Load Graph": # when a user uploads a JSON file
+            if 'graphFile' not in request.files: #checking if it's a json file
+                return render_template('scrape_form.html', error="Invalid file json file provided")
             
             file = request.files['graphFile']
 
-            if file.filename == '':
-                return render_template('scrape_form.html', error="No file selected for upload.")
+            if not json_graph_file_handling(file): #check if valid json file
+                return render_template('scrape_form.html', error="Invalid file json file provided")
             
-            if file and file.filename.endswith('.json'):
-                try:
-                    loaded_data = json.load(file) # Parse the JSON file stream
-                    
-                    # Prepare data structures for index.html
-                    final_prereqs_for_template = {}
-                    final_details_for_template = {}
+            else: #process the json file for the graph
+                prereqs_data, details_data = json_graph_file_handling.process_json_graph_file(file)
 
-                    if 'nodes' not in loaded_data or 'edges' not in loaded_data:
-                        return render_template('scrape_form.html', error="Invalid JSON graph file: 'nodes' or 'edges' key missing.")
+                #Saving to session
+                session['prereqs_data'] = prereqs_data
+                session['details_data'] = details_data
+                session['graph_data_available'] = True
 
-                    # Process nodes from the loaded JSON
-                    for node_data in loaded_data.get('nodes', []):
-                        node_id = node_data.get('id')
-                        if not node_id: 
-                            print("Skipping node without ID from JSON:", node_data)
-                            continue 
+                return redirect("graph")
 
-                        # Extract details, using fallbacks for robustness
-                        sem_offered = node_data.get("original_semesters_offered", node_data.get("semesters_offered", "Unknown"))
-                        final_details_for_template[node_id] = {
-                            "title": node_data.get("original_title", node_data.get("title", "Unknown Title")),
-                            "credits": node_data.get("original_credits", node_data.get("credits", "N/A")),
-                            "semesters_offered": sem_offered,
-                            "color": node_data.get("color", utils.parse_semester_to_color(sem_offered)), # Use stored color or recalculate
-                            "id": node_id,
-                            "label": node_data.get("label", f"{node_id}\nUnknown Title\n(N/A credits)"),
-                            "shape": node_data.get("shape", "box"),
-                            "font": node_data.get("font", {'multi': 'html', 'align': 'center'}),
-                            "original_title": node_data.get("original_title", "Unknown Title"), # Ensure these are passed for editing
-                            "original_credits": node_data.get("original_credits", "N/A"),
-                            "original_semesters_offered": sem_offered,
-                            "x": node_data.get("x"),
-                            "y": node_data.get("y")
-                        }
-                        final_prereqs_for_template[node_id] = [] # Initialize prereqs list for this node
-
-                    # Process edges from the loaded JSON
-                    for edge_data in loaded_data.get('edges', []):
-                        from_node = edge_data.get('from')
-                        to_node = edge_data.get('to')
-                        if from_node and to_node:
-                            if to_node not in final_prereqs_for_template:
-                                final_prereqs_for_template[to_node] = []
-                                if to_node not in final_details_for_template: 
-                                     final_details_for_template[to_node] = {
-                                        "title": f"{to_node} (Prereq from Edge)", "credits": "N/A", 
-                                        "semesters_offered": "Unknown", "color": "grey", "id": to_node,
-                                        "label": f"{to_node}\n(Prereq from Edge)\n(N/A credits)", "shape": "box",
-                                        "font": {'multi': 'html', 'align': 'center'},
-                                        "original_title": f"{to_node} (Prereq from Edge)", "original_credits": "N/A",
-                                        "original_semesters_offered": "Unknown"
-                                     }
-                            final_prereqs_for_template[to_node].append(from_node)
-                    
-                    if not final_details_for_template: # Check if any nodes were actually processed
-                         return render_template('scrape_form.html', error="No valid node data found in the uploaded JSON file.")
-
-                    #Saving the variable to session
-                    session['prereqs_data'] = final_prereqs_for_template
-                    session['details_data'] = final_details_for_template
-                    session['graph_data_available'] = True
-
-                    return redirect("view_graph")
-                
-                except json.JSONDecodeError:
-                    return render_template('scrape_form.html', error="Invalid JSON file: Could not parse content.")
-                except Exception as e:
-                    print(f"Error processing uploaded graph file: {e}") # Log the actual error
-                    return render_template('scrape_form.html', error=f"An error occurred while processing the graph file: {e}")
-            else:
-                return render_template('scrape_form.html', error="Invalid file type. Please upload a .json file.")
-        else:
-            # If POST but not "Load Graph" action
-            return render_template('scrape_form.html', error="Unknown POST action.")
-
-    action = request.args.get('action')
     url = request.args.get('url')
     major = request.args.get("programSearch")
     
-    if action == "Visualize Program":
-        courses_prereqs_data, processed_details_data = prepare_data.process_program_data(url, major)
+    if action == "Visualize Program": 
+        courses_prereqs_data, processed_details_data = get_information_for_major.process_program_data(url, major) #scrape the major's site and grab all info
         
         #Saving the variable to session
         session['prereqs_data'] = courses_prereqs_data
         session['details_data'] = processed_details_data
         session['graph_data_available'] = True
 
-        return redirect("view_graph")
+        return redirect("graph")
 
     else:
         # Default action if no specific button was identified (e.g. initial GET request)
@@ -141,51 +107,43 @@ def scrape_form():
             session.pop('prereqs_data', None)
             session.pop('details_data', None)
             session.pop('graph_data_available', None)
-            # This is an initial GET request to the form, no error needed
+            # This is an initial GET request to the form
             return render_template('scrape_form.html')
         else:
             session.pop('prereqs_data', None)
             session.pop('details_data', None)
             session.pop('graph_data_available', None)
-            # This could be a GET with an unknown action or some other case
             return render_template('scrape_form.html', error="Please select a valid action.")
 
-
-#see if there's a saved graph
-@app.route("/view_graph", methods=["GET","POST"])
-def view_graph():
-    if session.get('graph_data_available'):
+@app.route("/graph", methods=["GET","POST"]) #main route where graph is displayed
+def graph(): 
+    if session.get('graph_data_available'): #see if there's a saved graph
         prereqs = session.get('prereqs_data', {})
         details = session.get('details_data', {})
-        return render_template('index.html', prereqs=prereqs, details=details)
+        logging.log_entry(request, "displaying graph")
+        return render_template('graph.html', prereqs=prereqs, details=details)
     else:
-        # If no data, redirect to home to load/scrape a program
+        # If no data, redirect back to home page
         return redirect(url_for('scrape_form'))
 
-@app.route("/add_program")
-def add_program():
-    if not session.get('graph_data_available'):
+@app.route("/add_program_form") # form for choosing which program to add to graph
+def add_program_form():
+    if not session.get('graph_data_available'): #verify there's an existing graph first
         return redirect(url_for('scrape_form', error="Please load or visualize a base program first."))
-    return render_template("add_network_form.html")
+    return render_template("add_program_form.html")
 
-@app.route("/add_program_to_graph", methods=["GET"])
+@app.route("/add_program_to_graph", methods=["GET"]) # adding another program to their graph (like a minor)
 def add_program_to_graph():
-    user_ip = request.remote_addr
-    timestamp = datetime.now()
-
     if not session.get('graph_data_available'):
         return redirect(url_for('scrape_form', error="No active graph to add to. Please start a new one."))
 
     new_program_url = request.args.get('url')
     new_program_name = request.args.get('programSearch') # From add_network_form.html
 
-    if not new_program_url or not new_program_name:
-        return render_template('add_network_form.html', error="Program URL or name missing.")
-
-    print(f"User {user_ip} attempting to add program {new_program_name} ({new_program_url}) at {timestamp}")
+    logging.log_entry(request, f"adding program {new_program_name} (url: {new_program_url}) to graph")    
 
     # Fetch and process data for the new program
-    new_prereqs, new_details = prepare_data.process_program_data(new_program_url, new_program_name)
+    new_prereqs, new_details = get_information_for_major.process_program_data(new_program_url, new_program_name)
 
     if new_prereqs is None or new_details is None:
         return render_template('add_network_form.html', error=f"Could not process data for {new_program_name}.")
@@ -214,10 +172,9 @@ def add_program_to_graph():
     # Store merged data back in session
     session['prereqs_data'] = current_prereqs
     session['details_data'] = current_details
-    session['graph_data_available'] = True # Ensure this is set
+    session['graph_data_available'] = True 
 
-    print(f"Successfully merged {new_program_name} into the graph for user {user_ip} at {timestamp}")
-    return redirect(url_for('view_graph'))
+    return redirect(url_for('graph'))
 
 @app.route('/modify_graph', methods=['GET']) 
 def modify_nodes():
@@ -258,7 +215,7 @@ def modify_nodes():
 
         session.modified = True
         print("updated session after adding node")
-        return redirect(url_for('view_graph'))
+        return redirect(url_for('graph'))
 
     #The rest of the requests are made using asynchronous AJAX requests, info updated with session only on refresh
     elif request_type == "edit node":
@@ -310,6 +267,136 @@ def modify_nodes():
 
     return jsonify(status="success", message="Modification made successfully")
 
+@app.route('/save_graph_to_db', methods=['POST'])
+def save_graph():
+    #verify the graph got passed with the request
+    if not session.get('graph_data_available'):
+        return jsonify({"status": "error", "message": "No active graph to save."}), 400
+
+    data = request.get_json()
+    access_token = data.get("access_token")
+    schedule_name = data.get("schedule_name", "My Degree Plan")
+    
+    # Check if this graph already exists in the database
+    schedule_id = session.get('schedule_id') 
+
+    if not access_token:
+        return jsonify({"status": "error", "message": "User not authenticated."}), 401
+
+    try:
+        user_response = Client.auth.get_user(access_token)
+        user_id = user_response.user.id
+        
+        prereqs = session.get('prereqs_data', {})
+        details = session.get('details_data', {})
+
+        if schedule_id:
+            # UPDATE EXISTING GRAPH
+            Client.table(USER_SCHEDULES_TABLE_NAME).update({
+                "prereqs_data": prereqs,
+                "details_data": details
+                # Not updating schedule_name here so it keeps its original name, 
+                # but you could add a rename feature later!
+            }).eq("id", schedule_id).eq("user_id", user_id).execute()
+            
+            logging.log_entry(request, f"updated graph '{schedule_id}' in database")
+            return jsonify({"status": "success", "message": "Graph updated successfully!", "schedule_id": schedule_id})
+            
+        else:
+            # INSERT NEW GRAPH
+            response = Client.table(USER_SCHEDULES_TABLE_NAME).insert({
+                "user_id": user_id,
+                "schedule_name": schedule_name,
+                "prereqs_data": prereqs,
+                "details_data": details
+            }).execute()
+
+            # Grab the newly generated UUID and save it to the session
+            new_id = response.data[0]['id']
+            session['schedule_id'] = new_id 
+            
+            logging.log_entry(request, f"saved new graph '{schedule_name}' to database")
+            return jsonify({"status": "success", "message": "Graph saved successfully!", "schedule_id": new_id})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+@app.route('/saved_graphs')
+def saved_graphs():
+    user_id = session.get('user_id')
+    print(user_id)
+    # If Flask doesn't think they are logged in, kick them to home
+    if not user_id:
+        return redirect(url_for('scrape_form'))
+
+    try:
+        # Ask Supabase for this user's graphs, newest first
+        response = Client.table(USER_SCHEDULES_TABLE_NAME).select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
+        schedules = response.data
+    except Exception as e:
+        print(f"Database error: {e}")
+        schedules = []
+
+    return render_template('saved_graphs.html', schedules=schedules)
+
+@app.route('/load_graph', methods=['POST'])
+def load_graph():
+    schedule_id = request.form.get('schedule_id')
+    user_id = session.get('user_id')
+    
+    if not schedule_id or not user_id:
+        return redirect(url_for('saved_graphs'))
+    
+    try:
+        # Fetch the specific graph's data from Supabase
+        response = Client.table(USER_SCHEDULES_TABLE_NAME).select("*").eq("id", schedule_id).eq("user_id", user_id).execute()
+        
+        if response.data:
+            graph = response.data[0]
+            
+            # Load the data into the Flask session
+            session['prereqs_data'] = graph.get('prereqs_data', {})
+            session['details_data'] = graph.get('details_data', {})
+            session['schedule_id'] = graph.get('id')
+            session['graph_data_available'] = True
+            
+            logging.log_entry(request, f"opened saved graph '{graph.get('schedule_name')}'")
+            return redirect(url_for('graph'))
+            
+    except Exception as e:
+        print(f"Error loading graph: {e}")
+    
+    return redirect(url_for('saved_graphs'))
+
+@app.route('/delete_graph', methods=['POST'])
+def delete_graph():
+    data = request.get_json()
+    schedule_id = data.get('schedule_id')
+    user_id = session.get('user_id')
+
+    if not schedule_id or not user_id:
+        return jsonify({"status": "error", "message": "Unauthorized"}), 401
+    
+    try:
+        # Delete the graph from Supabase
+        Client.table(USER_SCHEDULES_TABLE_NAME).delete().eq("id", schedule_id).eq("user_id", user_id).execute()
+        
+        # If the user deletes the graph they are currently looking at, clear the session tracking
+        if session.get('schedule_id') == schedule_id:
+            session.pop('schedule_id', None)
+
+        logging.log_entry(request, f"deleted graph '{schedule_id}'")
+        return jsonify({"status": "success"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 400
+
+@app.route('/reset_password')
+def reset_password():
+    return render_template('reset_password.html')
+
+@app.route('/terms_of_service') # required for google oauth
+def terms_of_service():
+    return render_template('terms_of_service.html')
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))

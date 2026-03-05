@@ -1,5 +1,8 @@
-from scripts import get_program_codes, get_prereqs, utils
+from scripts.Getting_Info_For_Major import get_courses_of_major, get_prereqs
+from scripts import utils
 import json
+
+#Given the link from provided from the programs.json file, it grabs all the courses of the major, and compiles all the info for each course.
 
 courses_info = {}
 honours_matches = {}
@@ -12,8 +15,8 @@ with open('static/json/honours_matches.json', 'r', encoding='utf-8') as f:
 
 def process_program_data(program_url, major):
     try:
-        course_codes = get_program_codes.get_program_codes(program_url)
-        if course_codes == [] or course_codes is None:
+        course_codes = get_courses_of_major.get_program_codes(program_url)
+        if not course_codes:
             print(f"No course codes found for URL: {program_url}")
             return None, None
 
