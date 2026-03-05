@@ -168,6 +168,11 @@
         supabase_url: "{{ supabase_url }}",
         supabase_key: "{{ supabase_key }}",
       };
+
+      window.supabaseClient = window.supabase.createClient(
+        window.SUPABASE_CONFIG.supabase_url, 
+        window.SUPABASE_CONFIG.supabase_key
+      );
     </script>
     <script src="{{ url_for('static', filename='js/auth.js') }}"></script>
     {% block scripts %}{% endblock %}

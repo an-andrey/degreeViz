@@ -1,5 +1,4 @@
-const { supabase_url, supabase_key } = window.SUPABASE_CONFIG;
-const supabaseClient = window.supabase.createClient(supabase_url, supabase_key);
+const supabaseClient = window.supabaseClient;
 
 document.addEventListener("DOMContentLoaded", () => {
   // --- DOM Elements: Auth Modal ---
@@ -113,8 +112,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // 5. Handle Main Email Auth Button
   primaryAuthBtn.addEventListener("click", async () => {
-    // e.preventDefault(); //prevents the form loading before the user token is acquired from supabase
-
     const email = emailInput.value;
     const password = passwordInput.value;
     if (!email || !password)

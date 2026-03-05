@@ -107,11 +107,7 @@ export function setupSaveButtonHandler() {
   const saveGraphBtn = document.getElementById("saveGraphBtn");
   if (!saveGraphBtn) return;
 
-  const { supabase_url, supabase_key } = window.SUPABASE_CONFIG;
-  const supabaseClient = window.supabase.createClient(
-    supabase_url,
-    supabase_key,
-  );
+  const supabaseClient = window.supabaseClient;
 
   // Check if logged in & set initial UI state
   supabaseClient.auth.getSession().then(({ data: { session } }) => {
