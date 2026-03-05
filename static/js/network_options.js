@@ -1,6 +1,6 @@
 // filepath: c:\Users\anamb\OneDrive\Desktop\Code\python\degreeViz\static\js\visNetworkOptions.js
 import { parseSemesterToColor } from "./utils.js";
-import { markGraphDirty } from "./ui_handler.js";
+import { markGraphDirty, openCustomPrompt } from "./ui_handler.js";
 
 export function getVisNetworkOptions(nodes, edges) {
   return {
@@ -67,87 +67,107 @@ export function getVisNetworkOptions(nodes, edges) {
       enabled: true,
       initiallyActive: false,
       addNode: function (nodeData, callback) {
-        const id = prompt("Enter new Course ID (e.g., COMP101):", "");
-        if (!id) {
-          alert("Node ID cannot be empty.");
-          return callback(null);
-        }
-        if (nodes.get(id)) {
-          alert("Node with this ID already exists!");
-          return callback(null);
-        }
-        const title = prompt("Enter course title:", "New Course");
-        const credits = prompt("Enter credits:", "3");
-        const semesters = prompt(
-          "Enter semesters offered (e.g., Fall, Winter):",
-          "Fall",
-        );
+        openCustomPrompt({
+          title: "Add New Course",
+          submitText: "Add Course",
+          fields: [
+            { id: "code", label: "Course ID", placeholder: "e.g., COMP 202" },
+            {
+              id: "title",
+              label: "Course Title",
+              placeholder: "e.g., Foundations of Programming",
+            },
+            { id: "credits", label: "Credits", defaultValue: "3" },
+            {
+              id: "semesters",
+              label: "Semesters Offered",
+              defaultValue: "Fall, Winter",
+            },
+          ],
+          onSubmit: (data) => {
+            if (!data.code || !data.title) {
+              alert("Course ID and Title are required.");
+              return callback(null);
+            }
+            if (nodes.get(data.code)) {
+              alert("A course with this ID already exists!");
+              return callback(null);
+            }
 
-        // Handle cases where user cancels prompts
-        if (title === null || credits === null || semesters === null) {
-          return callback(null); // User cancelled one of the prompts
-        }
+            const queryParams = new URLSearchParams({
+              request: "add node",
+              code: data.code,
+              title: data.title,
+              credits: data.credits,
+              semesters_offered: data.semesters,
+              x: nodeData.x,
+              y: nodeData.y,
+            }).toString();
 
-        const queryParams = new URLSearchParams({
-          request: "add node",
-          code: id,
-          title: title,
-          credits: credits,
-          semesters_offered: semesters,
-          x: nodeData.x,
-          y: nodeData.y,
-        }).toString();
+            callback(null); // Close vis-network UI securely
 
-        callback(null);
-
-        fetch(`/modify_graph?${queryParams}`, {
-          method: "GET", // Or 'POST'
-          headers: { "X-Requested-With": "XMLHttpRequest" },
-        }).then((response) => {
-          if (response.ok) {
-            markGraphDirty(); // allow graph to update
-            window.location.href = response.url;
-          } else {
-            console.log("failed to add node");
-          }
+            fetch(`/modify_graph?${queryParams}`, {
+              method: "GET",
+              headers: { "X-Requested-With": "XMLHttpRequest" },
+            }).then((response) => {
+              if (response.ok) {
+                markGraphDirty();
+                window.location.href = response.url; // Refresh to show node
+              }
+            });
+          },
         });
       },
+
       editNode: function (nodeData, callback) {
-        const newTitle = prompt("Edit course title:", nodeData.original_title);
-        const newCredits = prompt("Edit credits:", nodeData.original_credits);
-        const newSemesters = prompt(
-          "Edit semesters offered:",
-          nodeData.original_semesters_offered,
-        );
-        if (newTitle === null || newCredits === null || newSemesters === null)
-          return callback(null);
+        openCustomPrompt({
+          title: "Edit Course",
+          submitText: "Save Changes",
+          fields: [
+            {
+              id: "title",
+              label: "Course Title",
+              defaultValue: nodeData.original_title,
+            },
+            {
+              id: "credits",
+              label: "Credits",
+              defaultValue: nodeData.original_credits,
+            },
+            {
+              id: "semesters",
+              label: "Semesters Offered",
+              defaultValue: nodeData.original_semesters_offered,
+            },
+          ],
+          onSubmit: (data) => {
+            if (!data.title) return callback(null);
 
-        // nodeData.id = newCode;
-        console.log(newSemesters);
-        nodeData.original_title = newTitle;
-        nodeData.original_credits = newCredits;
-        nodeData.original_semesters_offered = newSemesters;
-        nodeData.label = `${nodeData.id}\n${newTitle}\n(${newCredits} credits)\n${newSemesters}`;
-        nodeData.color = parseSemesterToColor(newSemesters);
-        callback(nodeData);
+            nodeData.original_title = data.title;
+            nodeData.original_credits = data.credits;
+            nodeData.original_semesters_offered = data.semesters;
+            nodeData.label = `${nodeData.id}\n${data.title}\n(${data.credits} credits)\n${data.semesters}`;
+            nodeData.color = parseSemesterToColor(data.semesters);
 
-        const queryParams = new URLSearchParams({
-          request: "edit node",
-          code: nodeData.id,
-          node_title: newTitle,
-          credits: newCredits,
-          semesters_offered: newSemesters,
-        }).toString();
+            callback(nodeData); // Update Graph Visually
 
-        fetch(`/modify_graph?${queryParams}`, {
-          method: "GET", // Or 'POST'
-          headers: { "X-Requested-With": "XMLHttpRequest" },
-        }).then((response) => {
-          if (response.ok) {
-            markGraphDirty(); // allow graph to update
-          } else {
-            console.log("failed to edit node");
-          }
+            const queryParams = new URLSearchParams({
+              request: "edit node",
+              code: nodeData.id,
+              node_title: data.title,
+              credits: data.credits,
+              semesters_offered: data.semesters,
+            }).toString();
+
+            fetch(`/modify_graph?${queryParams}`, {
+              method: "GET",
+              headers: { "X-Requested-With": "XMLHttpRequest" },
+            }).then((response) => {
+              if (response.ok) {
+                markGraphDirty();
+              }
+            });
+          },
         });
       },
       deleteNode: function (dataToDelete, callback) {

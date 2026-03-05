@@ -128,7 +128,7 @@
           <p id="authMessage" class="auth-message"></p>
         </form>
 
-        <!-- <div class="divider"><span>OR</span></div> -->
+        <div class="divider"><span>OR</span></div>
 
         <button id="googleLoginBtn" class="social-btn google-btn" hidden>
           <img
@@ -138,6 +138,25 @@
           />
           Continue with Google
         </button>
+      </div>
+    </div>
+
+    <!-- Generic Custom Prompt Modal -->
+    <div id="customPromptModal" class="modal-overlay">
+      <div class="modal-content auth-card form-card" style="max-width: 450px;">
+        <span class="close-modal" id="closePromptModal">&times;</span>
+        <h3 id="promptTitle" style="text-align: center; margin-bottom: 20px; border-bottom: none; padding-bottom: 0; margin-top: 5px;">Prompt Title</h3>
+        
+        <form id="customPromptForm" onsubmit="event.preventDefault();">
+          <div id="promptFieldsContainer">
+            <!-- Dynamic input fields get injected here by JavaScript -->
+          </div>
+          
+          <div class="card-action" style="display: flex; gap: 10px; margin-top: 25px;">
+            <button type="button" id="cancelPromptBtn" style="flex: 1; margin: 0; background-color: transparent; color: var(--text-muted); border: 1px solid var(--border-color); border-radius: 4px; font-weight: 600; cursor: pointer;">Cancel</button>
+            <button type="submit" id="submitPromptBtn" style="flex: 1; margin: 0; background-color: var(--mcgill-red); color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">Submit</button>
+          </div>
+        </form>
       </div>
     </div>
 
