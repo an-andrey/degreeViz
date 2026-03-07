@@ -20,8 +20,13 @@ USER_SCHEDULES_TABLE_NAME = "userschedules"
 
 Session(app)
 
-#Loading SUPABASE
-load_dotenv()
+# to handle different env, in Railway APP_ENV = 'prod'
+APP_ENV = os.environ.get("APP_ENV", "local").lower()
+
+if APP_ENV == "prod" or APP_ENV == "preprod": 
+    load_dotenv(".env")
+elif APP_ENV == "local":
+    load_dotenv(".env.pre") 
 
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 SUPABASE_URL = os.environ.get("SUPABASE_URL") 
