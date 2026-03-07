@@ -783,12 +783,12 @@ button:disabled {
 /* --- Save Graph Button --- */
 #saveGraphBtn {
   display: none;
-  background-color: #28a745; /* Success green for Save/Update */
+  background-color: var(--mcgill-red);
   transition: all 0.3s ease;
 }
 
 #saveGraphBtn:hover:not(:disabled) {
-  background-color: #218838;
+  background-color: var(--mcgill-red-hover);
 }
 
 /* "Graph up to date" state */

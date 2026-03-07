@@ -1,4 +1,4 @@
-.env
+.env*
 venv/
 lib/
 __pycache__/

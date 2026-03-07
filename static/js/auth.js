@@ -75,7 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
     .addEventListener("click", async () => {
       const { error } = await supabaseClient.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: window.location.origin },
+        options: { redirectTo: window.location.href },
       });
       if (error) authMessage.textContent = error.message;
     });
@@ -111,7 +111,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // 5. Handle Main Email Auth Button
-  primaryAuthBtn.addEventListener("click", async () => {
+  primaryAuthBtn.addEventListener("click", async (e) => {
+    e.preventDefault(); // no page refresh to not remove the graph
+
     const email = emailInput.value;
     const password = passwordInput.value;
     if (!email || !password)
@@ -130,7 +132,13 @@ document.addEventListener("DOMContentLoaded", () => {
       if (error) {
         authMessage.textContent = "Invalid login credentials.";
       } else {
-        authModal.style.display = "none";
+        authMessage.style.color = "#28a745"; // success green
+        authMessage.textContent = "Success! You are now logged in.";
+        setTimeout(() => {
+          authModal.style.display = "none";
+          emailInput.value = ""; // Clear inputs for security
+          passwordInput.value = "";
+        }, 1000);
       }
     } else {
       authMessage.textContent = "Creating account...";
@@ -142,6 +150,9 @@ document.addEventListener("DOMContentLoaded", () => {
         authMessage.textContent = "Success! You are now logged in.";
         setTimeout(() => {
           authModal.style.display = "none";
+
+          emailInput.value = ""; // Clear inputs for security
+          passwordInput.value = "";
         }, 1500);
       }
     }
