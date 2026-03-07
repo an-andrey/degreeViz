@@ -107,13 +107,21 @@ export function setupSaveButtonHandler() {
   const saveGraphBtn = document.getElementById("saveGraphBtn");
   if (!saveGraphBtn) return;
 
+  // 1. Force the button to ALWAYS be visible
+  saveGraphBtn.style.display = "inline-block";
+
+  // Use the single instance we set up earlier!
   const supabaseClient = window.supabaseClient;
 
-  // Check if logged in & set initial UI state
+  // 2. Check if logged in & set initial UI state
   supabaseClient.auth.getSession().then(({ data: { session } }) => {
     if (session) {
-      saveGraphBtn.style.display = "inline-block";
-      updateSaveButtonUI(); // Call this to set the correct text on load
+      updateSaveButtonUI();
+    } else {
+      // Enticing default state for logged-out users
+      saveGraphBtn.textContent = "Save to Profile";
+      saveGraphBtn.disabled = false;
+      saveGraphBtn.style.backgroundColor = "var(--mcgill-red)";
     }
   });
 
@@ -123,8 +131,12 @@ export function setupSaveButtonHandler() {
       error,
     } = await supabaseClient.auth.getSession();
 
+    // 3. THE MAGIC: If not logged in, pop open the Auth Modal instead of an alert!
     if (!session || error) {
-      alert("You must be logged in to save a graph.");
+      const authModal = document.getElementById("authModal");
+      if (authModal) {
+        authModal.style.display = "flex";
+      }
       return;
     }
 
