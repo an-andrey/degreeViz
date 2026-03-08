@@ -328,6 +328,142 @@ button:disabled {
   font-size: 0.95em;
 }
 
+/* --- Node Inspector Sidebar --- */
+#graph-content {
+  position: relative; /* Anchors the absolute sidebar */
+  overflow: hidden; /* Keeps sidebar from poking out */
+}
+
+.node-inspector {
+  position: absolute;
+  top: 50px;
+  right: -300px;
+  width: 280px;
+  height: 100%;
+  background-color: var(--surface-color);
+  border-left: 1px solid var(--border-color);
+  border-radius: 0;
+  box-shadow: -4px 0 15px rgba(0, 0, 0, 0.05);
+  padding: 20px;
+  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 10;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.node-inspector.open {
+  right: 0;
+}
+
+.inspector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.inspector-header h4 {
+  margin: 0;
+  font-size: 1.2em;
+  color: var(--text-main);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  cursor: pointer;
+  color: var(--text-muted);
+  line-height: 1;
+  padding: 0 5px;
+}
+
+.inspector-title {
+  margin: 0 0 15px 0;
+  color: var(--text-muted);
+  font-size: 0.95em;
+  font-weight: 500;
+}
+
+.inspector-meta {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.badge {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: 700;
+}
+
+.badge-gray {
+  background: #f0f0f0;
+  color: var(--text-main);
+}
+.badge-red {
+  background: var(--error-bg);
+  color: var(--mcgill-red);
+}
+
+.inspector-offered {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-bottom: 25px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.inspector-controls label {
+  font-size: 0.85em;
+  margin-bottom: 4px;
+}
+
+.inspector-controls select {
+  width: 100%;
+  padding: 8px;
+  font-family: inherit;
+  margin-bottom: 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-color);
+}
+
+/* --- The Clean Badge Dropdown --- */
+select.badge-select {
+  background-color: var(--error-bg); /* Keeps the soft pink background */
+  color: var(--mcgill-red); /* Keeps the red text */
+  border: 1px solid transparent; /* Invisible border prevents layout jumps on hover */
+
+  /* Hides the ugly default browser arrows */
+  appearance: none;
+  -webkit-appearance: none;
+
+  /* Extra padding on the right to make room for our custom arrow */
+  padding: 4px 24px 4px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+
+  /* Injects a crisp, custom McGill Red downward chevron */
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6"><path fill="%23ed1b2f" d="M5 6L0 1.25 1.25 0 5 3.5 8.75 0 10 1.25z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 8px 5px;
+}
+
+/* A highly subtle, clean hover effect instead of the massive red block */
+select.badge-select:hover,
+select.badge-select:focus {
+  outline: none;
+  border: 1px solid var(--mcgill-red); /* Just a crisp red outline on hover */
+  background-color: #fdf3f4; /* Keeps the soft pink */
+}
+
 /* --- Alerts & Errors --- */
 .error {
   color: var(--error-text);

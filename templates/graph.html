@@ -45,6 +45,44 @@
         </button>
       </div>
       <div id="courseNetwork"></div>
+
+      <div id="nodeInspector" class="node-inspector">
+        <div class="inspector-header">
+          <h4 id="inspectorCode">COMP 250</h4>
+          <button id="closeInspector" class="close-btn">×</button>
+        </div>
+        <p id="inspectorTitle" class="inspector-title">
+          Intro to Computer Science
+        </p>
+
+        <div class="inspector-meta">
+          <span id="inspectorCredits" class="badge badge-gray">3 Credits</span>
+          <span id="inspectorCategory" class="badge badge-red">CORE</span>
+        </div>
+        <p class="inspector-offered">
+          Offered: <span id="inspectorOffered">Fall, Winter</span>
+        </p>
+
+        <div class="inspector-controls">
+          <label>Status</label>
+          <select id="inspectorStatus">
+            <option value="TO TAKE">To Take</option>
+            <option value="TAKING">Taking</option>
+            <option value="DONE">Done</option>
+          </select>
+
+          <label>Planned Term</label>
+          <div style="display: flex; gap: 8px">
+            <select id="inspectorTermSeason" style="flex: 1">
+              <option value="Unassigned">Unassigned</option>
+              <option value="Fall">Fall</option>
+              <option value="Winter">Winter</option>
+              <option value="Summer">Summer</option>
+            </select>
+            <select id="inspectorTermYear" style="width: 85px"></select>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div id="sheet-content" class="tab-content">

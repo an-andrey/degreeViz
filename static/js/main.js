@@ -73,6 +73,132 @@ document.addEventListener("DOMContentLoaded", function () {
       }
     }
   });
+  // -- POPULATE SEMESTER DROP DOWN --
+  function populateSemesterDropdown() {
+    const select = document.getElementById("inspectorTerm");
+    if (!select) return;
+
+    // Always keep the unassigned option at the top
+    select.innerHTML = '<option value="Unassigned">Unassigned</option>';
+
+    const currentYear = new Date().getFullYear();
+
+    // Generate terms for past 2 years until 2 years in the future
+    for (let y = currentYear - 2; y <= currentYear + 3; y++) {
+      // Fall
+      const fallOpt = document.createElement("option");
+      fallOpt.value = `F${y}`;
+      fallOpt.textContent = `Fall ${y}`;
+      select.appendChild(fallOpt);
+
+      // Winter (technically happens in the beginning of the NEXT year)
+      const winterOpt = document.createElement("option");
+      winterOpt.value = `W${y + 1}`;
+      winterOpt.textContent = `Winter ${y + 1}`;
+      select.appendChild(winterOpt);
+
+      // Summer
+      const summerOpt = document.createElement("option");
+      summerOpt.value = `S${y + 1}`;
+      summerOpt.textContent = `Summer ${y + 1}`;
+      select.appendChild(summerOpt);
+    }
+  }
+
+  populateSemesterDropdown();
+
+  // --- INSPECTOR SIDEBAR LOGIC ---
+  const inspector = document.getElementById("nodeInspector");
+  let currentlySelectedNodeId = null;
+
+  // 1. Populate the Year Dropdown (Current year - 1 up to + 2)
+  function populateYearDropdown() {
+    const yearSelect = document.getElementById("inspectorTermYear");
+    if (!yearSelect) return;
+    const currentYear = new Date().getFullYear();
+    for (let y = currentYear - 2; y <= currentYear + 2; y++) {
+      const opt = document.createElement("option");
+      opt.value = y;
+      opt.textContent = y;
+      if (y === currentYear) opt.selected = true;
+      yearSelect.appendChild(opt);
+    }
+  }
+  populateYearDropdown();
+
+  // 2. Open sidebar on node select
+  network.on("selectNode", function (params) {
+    const nodeId = params.nodes[0];
+    currentlySelectedNodeId = nodeId;
+    const nodeData = detailsData[nodeId];
+
+    if (nodeData) {
+      document.getElementById("inspectorCode").textContent = nodeId;
+      document.getElementById("inspectorTitle").textContent =
+        nodeData.title || "Unknown Title";
+      document.getElementById("inspectorCredits").textContent =
+        `${nodeData.credits || 3} Credits`;
+      document.getElementById("inspectorCategory").textContent =
+        nodeData.category || "CORE";
+      document.getElementById("inspectorOffered").textContent =
+        nodeData.semesters_offered || "Unknown";
+
+      document.getElementById("inspectorStatus").value =
+        nodeData.status || "TO TAKE";
+
+      // Parse the Planned Term (e.g., "Fall 2024" -> "Fall" and "2024")
+      const planned = nodeData.planned_semester || "Unassigned";
+      if (planned === "Unassigned") {
+        document.getElementById("inspectorTermSeason").value = "Unassigned";
+      } else {
+        const parts = planned.split(" ");
+        document.getElementById("inspectorTermSeason").value =
+          parts[0] || "Fall";
+        document.getElementById("inspectorTermYear").value =
+          parts[1] || new Date().getFullYear();
+      }
+
+      inspector.classList.add("open");
+    }
+  });
+
+  // 3. Close sidebar logic
+  network.on("deselectNode", function () {
+    inspector.classList.remove("open");
+    currentlySelectedNodeId = null;
+  });
+
+  document.getElementById("closeInspector").addEventListener("click", () => {
+    inspector.classList.remove("open");
+  });
+
+  // 4. Listen for Sidebar Changes
+  document
+    .getElementById("inspectorStatus")
+    .addEventListener("change", function (e) {
+      if (currentlySelectedNodeId && detailsData[currentlySelectedNodeId]) {
+        detailsData[currentlySelectedNodeId].status = e.target.value;
+        markGraphDirty();
+      }
+    });
+
+  // Handle the Split Term/Year
+  function updatePlannedTerm() {
+    if (!currentlySelectedNodeId || !detailsData[currentlySelectedNodeId])
+      return;
+    const season = document.getElementById("inspectorTermSeason").value;
+    const year = document.getElementById("inspectorTermYear").value;
+
+    const newVal = season === "Unassigned" ? "Unassigned" : `${season} ${year}`;
+    detailsData[currentlySelectedNodeId].planned_semester = newVal;
+    markGraphDirty();
+  }
+  document
+    .getElementById("inspectorTermSeason")
+    .addEventListener("change", updatePlannedTerm);
+  document
+    .getElementById("inspectorTermYear")
+    .addEventListener("change", updatePlannedTerm);
 
   // --- POSITION SAVING LOGIC (DRAG END) ---
   network.on("dragEnd", function (params) {
