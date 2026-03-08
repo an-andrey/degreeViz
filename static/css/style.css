@@ -225,6 +225,47 @@ button:disabled {
   margin: 0;
 }
 
+/* --- Workspace & Tabs Container --- */
+
+/* This invisible container takes over the width/centering of the old graph-wrapper */
+.workspace-container {
+  max-width: 1300px; /* Your exact prod width */
+  margin: 15px auto; /* Your exact prod margin */
+  width: 95%; /* Your exact prod responsive width */
+  position: relative;
+}
+
+/* Tabs sitting perfectly on top of the border */
+.tabs-header {
+  display: flex;
+  gap: 5px;
+  padding-left: 20px; /* Aligns visually with the padding inside the box */
+  margin-bottom: -15px; /* Overlaps the box border perfectly */
+  position: relative;
+  z-index: 2;
+}
+
+.tab-btn {
+  background-color: #f0f0f0; /* Soft gray for inactive tabs */
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+  padding: 10px 24px;
+  font-size: 0.95em;
+  font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+  margin: 0;
+  transition: all 0.2s ease;
+}
+
+.tab-btn.active {
+  background-color: var(--surface-color); /* Matches the white box */
+  color: var(--mcgill-red);
+  border-top: 3px solid var(--mcgill-red);
+  padding-bottom: 11px; /* Extra pixel to cover the border underneath */
+}
+
 /* --- Graph Container --- */
 .graph-wrapper {
   max-width: 1300px; /* Nice and wide for the graph */
@@ -243,10 +284,48 @@ button:disabled {
 
 #courseNetwork {
   width: 100%;
-  height: 68vh; /* Explicit height so vis-network calculates coordinates correctly */
+  height: 63vh; /* Explicit height so vis-network calculates coordinates correctly */
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background-color: var(--surface-color);
+}
+
+/* Tab content toggling */
+.tab-content {
+  display: none;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+/* --- Sheet View Elements --- */
+.sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 15px;
+}
+
+.sheet-header h3 {
+  margin: 0;
+  color: var(--text-main);
+}
+
+.progress-hud {
+  display: flex;
+  gap: 20px;
+  background-color: var(--error-bg);
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--mcgill-red);
+}
+
+.hud-stat {
+  color: var(--mcgill-red);
+  font-size: 0.95em;
 }
 
 /* --- Alerts & Errors --- */
@@ -510,6 +589,42 @@ button:disabled {
   z-index: 1000;
   justify-content: center;
   align-items: center;
+}
+
+/* --- Custom Prompt Modal Scrolling Fix --- */
+
+/* Ensure the main white box doesn't exceed the screen height */
+#customPromptModal > div {
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make the fields section scrollable while keeping title/buttons pinned */
+#promptFieldsContainer {
+  overflow-y: auto;
+  max-height: 55vh; /* Restricts the height so the scrollbar appears */
+  padding-right: 12px; /* Leaves breathing room so the scrollbar doesn't cover text */
+  margin-bottom: 15px;
+}
+
+/* Optional: Make the scrollbar look modern and sleek (Webkit browsers) */
+#promptFieldsContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+#promptFieldsContainer::-webkit-scrollbar-track {
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+#promptFieldsContainer::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+#promptFieldsContainer::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
 
 /* --- Modal Content Box (Matches .form-card style) --- */
@@ -782,7 +897,6 @@ button:disabled {
 
 /* --- Save Graph Button --- */
 #saveGraphBtn {
-  display: none;
   background-color: var(--mcgill-red);
   transition: all 0.3s ease;
 }

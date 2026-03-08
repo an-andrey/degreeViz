@@ -71,17 +71,29 @@ export function getVisNetworkOptions(nodes, edges) {
           title: "Add New Course",
           submitText: "Add Course",
           fields: [
-            { id: "code", label: "Course ID", placeholder: "e.g., COMP 202" },
+            { id: "code", label: "Course Code", defaultValue: currentCode },
             {
               id: "title",
               label: "Course Title",
-              placeholder: "e.g., Foundations of Programming",
+              defaultValue: nodeData.original_title,
             },
-            { id: "credits", label: "Credits", defaultValue: "3" },
+            {
+              id: "credits",
+              label: "Credits",
+              defaultValue: nodeData.original_credits,
+            },
+            {
+              id: "category",
+              label: "Category",
+              type: "select",
+              options: ["CORE", "ELECTIVE", "COMPLEMENTARY"],
+              defaultValue: currentCategory,
+            },
             {
               id: "semesters",
               label: "Semesters Offered",
-              defaultValue: "Fall, Winter",
+              type: "semester_builder",
+              defaultValue: nodeData.original_semesters_offered,
             },
           ],
           onSubmit: (data) => {
@@ -120,10 +132,14 @@ export function getVisNetworkOptions(nodes, edges) {
       },
 
       editNode: function (nodeData, callback) {
+        const currentCode = nodeData.id;
+        const currentCategory = nodeData.category || "CORE"; // Default to CORE
+
         openCustomPrompt({
           title: "Edit Course",
           submitText: "Save Changes",
           fields: [
+            { id: "code", label: "Course Code", defaultValue: currentCode },
             {
               id: "title",
               label: "Course Title",
@@ -135,27 +151,91 @@ export function getVisNetworkOptions(nodes, edges) {
               defaultValue: nodeData.original_credits,
             },
             {
+              id: "category",
+              label: "Category",
+              type: "select",
+              options: ["CORE", "ELECTIVE", "COMPLEMENTARY"],
+              defaultValue: currentCategory,
+            },
+            {
               id: "semesters",
               label: "Semesters Offered",
+              type: "semester_builder",
               defaultValue: nodeData.original_semesters_offered,
             },
           ],
           onSubmit: (data) => {
-            if (!data.title) return callback(null);
+            if (!data.title || !data.code) return callback(null);
+
+            const isRename = currentCode !== data.code;
+            const finalId = data.code;
 
             nodeData.original_title = data.title;
             nodeData.original_credits = data.credits;
             nodeData.original_semesters_offered = data.semesters;
-            nodeData.label = `${nodeData.id}\n${data.title}\n(${data.credits} credits)\n${data.semesters}`;
+            nodeData.category = data.category;
+
+            // Rebuild the label with the new Category Pill
+            nodeData.label = `${finalId}\n${data.title}\n(${data.credits} credits)\n${data.semesters}\n\n${data.category}`;
             nodeData.color = parseSemesterToColor(data.semesters);
 
-            callback(nodeData); // Update Graph Visually
+            if (isRename) {
+              // 1. Abort vis-network's default save (it ignores ID changes)
+              callback(null);
 
+              // 2. Clone the node with the new ID
+              const newNodeData = { ...nodeData, id: finalId };
+
+              // 3. Keep Global Datasets in sync so "Save Graph" doesn't break
+              if (detailsData[currentCode]) {
+                detailsData[finalId] = detailsData[currentCode];
+                delete detailsData[currentCode];
+              }
+              if (prereqsData[currentCode]) {
+                prereqsData[finalId] = prereqsData[currentCode];
+                delete prereqsData[currentCode];
+              }
+              for (let key in prereqsData) {
+                const idx = prereqsData[key].indexOf(currentCode);
+                if (idx > -1) prereqsData[key][idx] = finalId;
+              }
+
+              // 4. Update the Canvas
+              nodes.remove(currentCode);
+              nodes.add(newNodeData);
+
+              // 5. Rewire edges
+              const edgesToUpdate = edges
+                .get()
+                .filter((e) => e.from === currentCode || e.to === currentCode);
+              const rewiredEdges = edgesToUpdate.map((e) => {
+                const newEdge = { ...e };
+                if (newEdge.from === currentCode) newEdge.from = finalId;
+                if (newEdge.to === currentCode) newEdge.to = finalId;
+                return newEdge;
+              });
+              edges.update(rewiredEdges);
+            } else {
+              callback(nodeData); // Normal update
+            }
+
+            // Sync global dataset properties
+            if (detailsData[finalId]) {
+              detailsData[finalId].title = data.title;
+              detailsData[finalId].credits = data.credits;
+              detailsData[finalId].semesters_offered = data.semesters;
+              detailsData[finalId].category = data.category;
+              detailsData[finalId].color = nodeData.color;
+            }
+
+            // Tell Python about the edit/rename
             const queryParams = new URLSearchParams({
               request: "edit node",
-              code: nodeData.id,
+              old_code: currentCode, // Tells Python if a rename happened
+              code: finalId,
               node_title: data.title,
               credits: data.credits,
+              category: data.category,
               semesters_offered: data.semesters,
             }).toString();
 
@@ -163,9 +243,7 @@ export function getVisNetworkOptions(nodes, edges) {
               method: "GET",
               headers: { "X-Requested-With": "XMLHttpRequest" },
             }).then((response) => {
-              if (response.ok) {
-                markGraphDirty();
-              }
+              if (response.ok) markGraphDirty();
             });
           },
         });

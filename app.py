@@ -224,16 +224,33 @@ def modify_nodes():
 
     #The rest of the requests are made using asynchronous AJAX requests, info updated with session only on refresh
     elif request_type == "edit node":
+        old_code = request.args.get("old_code")
         code = request.args.get("code")
         credits = request.args.get('credits', "N/A")
         title = request.args.get("node_title")
+        category = request.args.get("category", "CORE")
         semesters_offered = request.args.get('semesters_offered', "Unknown")
         
-        #update existing info
-        details[code]["credits"] = credits
-        details[code]["title"] = title
-        details[code]["semesters_offered"] = semesters_offered
-        details[code]["color"] = utils.parse_semester_to_color(semesters_offered)
+        # Handle ID Rename (If the course code changed)
+        if old_code and code and old_code != code:
+            if old_code in details:
+                details[code] = details.pop(old_code)
+            if old_code in prereqs:
+                prereqs[code] = prereqs.pop(old_code)
+            
+            # Find and replace the old course code in all prerequisite lists
+            for req_list in prereqs.values():
+                if old_code in req_list:
+                    req_list.remove(old_code)
+                    req_list.append(code)
+                    
+        # Update existing info
+        if code in details:
+            details[code]["credits"] = credits
+            details[code]["title"] = title
+            details[code]["category"] = category
+            details[code]["semesters_offered"] = semesters_offered
+            details[code]["color"] = utils.parse_semester_to_color(semesters_offered)
         
     elif request_type == "delete node":
         code = request.args.get("code")
@@ -291,17 +308,20 @@ def save_graph():
     try:
         user_response = Client.auth.get_user(access_token)
         user_id = user_response.user.id
-        
-        prereqs = session.get('prereqs_data', {})
-        details = session.get('details_data', {})
+
+        # if data available from updates on JS side, otherwise grab the session one
+        prereqs = data.get("prereqs_data", session.get('prereqs_data', {}))
+        details = data.get("details_data", session.get('details_data', {}))
+
+        #update flask session with new data
+        session['prereqs_data'] = prereqs
+        session['details_data'] = details
 
         if schedule_id:
             # UPDATE EXISTING GRAPH
             Client.table(USER_SCHEDULES_TABLE_NAME).update({
                 "prereqs_data": prereqs,
                 "details_data": details
-                # Not updating schedule_name here so it keeps its original name, 
-                # but you could add a rename feature later!
             }).eq("id", schedule_id).eq("user_id", user_id).execute()
             
             logging.log_entry(request, f"updated graph '{schedule_id}' in database")

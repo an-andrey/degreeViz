@@ -14,7 +14,7 @@ export function initializeNodes(detailsData) {
         id: courseId,
         label: `${courseId}\n${detail.title || "Unknown Title"}\n(${
           detail.credits || "N/A"
-        } credits)\n${detail.semesters_offered || "Unknown"}`,
+        } credits)\n${detail.semesters_offered || "Unknown"}\n\n${detail.category || "CORE"}`,
         color: detail.color || parseSemesterToColor(detail.semesters_offered),
         shape: "box",
         font: { multi: "html", align: "center" },
