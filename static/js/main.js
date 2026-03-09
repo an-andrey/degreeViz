@@ -5,58 +5,115 @@ import {
   setupExportButtonHandler,
   initialLayoutAdjustment,
   setupSaveButtonHandler,
+  markGraphDirty,
 } from "./ui_handler.js";
+import { setupHistory } from "./history.js";
+import { setupSheetViewListeners, updateSheetView } from "./sheet_view.js";
+import { setupSidebar } from "./sidebar.js";
+import { generateNodeLabel, getStatusColor } from "./node_utils.js";
 
 document.addEventListener("DOMContentLoaded", function () {
   if (
     typeof prereqsData === "undefined" ||
     typeof detailsData === "undefined"
   ) {
-    console.error(
-      "Data (prereqsData or detailsData) not found. Make sure it's passed correctly from the Flask template.",
-    );
-    const networkContainer = document.getElementById("courseNetwork");
-    if (networkContainer) {
-      networkContainer.innerHTML =
-        '<p style="color: red; text-align: center;">Error: Course data could not be loaded.</p>';
-    }
+    console.error("Data not found.");
     return;
   }
 
   const nodes = initializeNodes(detailsData);
   const edges = initializeEdges(prereqsData, nodes);
-
   const container = document.getElementById("courseNetwork");
-  if (!container) {
-    console.error("Network container #courseNetwork not found.");
-    return;
+  const options = getVisNetworkOptions(nodes, edges);
+
+  //update node colours
+  const formatUpdates = nodes
+    .get()
+    .map((n) => {
+      const d = detailsData[n.id];
+      if (d) {
+        return {
+          id: n.id,
+          label: generateNodeLabel(
+            d.code || n.id,
+            d.title,
+            d.credits,
+            d.semesters_offered,
+            d.category,
+            d.planned_semester,
+            d.status,
+          ),
+          color: getStatusColor(d.status),
+        };
+      }
+      return null;
+    })
+    .filter((n) => n !== null);
+
+  nodes.update(formatUpdates);
+
+  // Position restore logic
+  if (
+    nodes.get().some((node) => node.x !== undefined && node.y !== undefined)
+  ) {
+    options.layout.hierarchical.enabled = false;
   }
 
-  const data = {
-    nodes: nodes,
-    edges: edges,
-  };
+  const addCourseBtn = document.getElementById("addCustomCourseBtn");
+  if (addCourseBtn) {
+    addCourseBtn.addEventListener("click", () => {
+      // This forces the graph into "drop a node" crosshair mode!
+      network.addNodeMode();
+    });
+  }
 
-  const options = getVisNetworkOptions(nodes, edges); // Pass nodes and edges
-  const network = new vis.Network(container, data, options);
+  const network = new vis.Network(container, { nodes, edges }, options);
 
-  // Setup UI Handlers
+  // Initialize UI & Tools
   setupHomeLinkHandler();
   setupExportButtonHandler(network, nodes, edges);
-  setupSaveButtonHandler();
+  setupSaveButtonHandler(network, nodes, edges);
   initialLayoutAdjustment(network, nodes);
+  setupSheetViewListeners(detailsData, updateSheetView, markGraphDirty);
 
-  //disable or enable edit mode depending on where you click
+  // Initialize Complex Subsystems
+  const { performWithoutHistory, saveGraphState } = setupHistory(
+    network,
+    nodes,
+    edges,
+    markGraphDirty,
+  );
+  setupSidebar(
+    network,
+    nodes,
+    detailsData,
+    markGraphDirty,
+    performWithoutHistory,
+  );
+
+  // Core Network Events
   network.on("click", function (params) {
     if (network.manipulation.options.enabled) {
-      // Only if manipulation is active
-      if (params.nodes.length > 0 || params.edges.length > 0) {
-        // Clicked on a node or an edge
-        network.enableEditMode(); // Enables context buttons like "Edit Selected", "Delete Selected"
-      } else {
-        // Clicked on empty space
-        network.disableEditMode(); // Hides context buttons, reverts to general manipulation toolbar
-      }
+      if (params.nodes.length > 0 || params.edges.length > 0)
+        network.enableEditMode();
+      else network.disableEditMode();
     }
   });
+
+  network.on("dragEnd", function (params) {
+    if (params.nodes.length > 0) {
+      const positions = network.getPositions(params.nodes);
+      const updates = params.nodes.map((id) => ({
+        id,
+        x: positions[id].x,
+        y: positions[id].y,
+      }));
+      performWithoutHistory(() => nodes.update(updates));
+      saveGraphState();
+      markGraphDirty();
+    }
+  });
+
+  // Initial Data Sync
+  setTimeout(() => updateSheetView(detailsData), 500);
 });
