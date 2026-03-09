@@ -59,6 +59,14 @@ document.addEventListener("DOMContentLoaded", function () {
     options.layout.hierarchical.enabled = false;
   }
 
+  const addCourseBtn = document.getElementById("addCustomCourseBtn");
+  if (addCourseBtn) {
+    addCourseBtn.addEventListener("click", () => {
+      // This forces the graph into "drop a node" crosshair mode!
+      network.addNodeMode();
+    });
+  }
+
   const network = new vis.Network(container, { nodes, edges }, options);
 
   // Initialize UI & Tools

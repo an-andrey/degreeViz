@@ -5,6 +5,26 @@ import { updateSheetView } from "./sheet_view.js";
 
 export function getVisNetworkOptions(nodes, edges) {
   return {
+    locale: "en",
+    locales: {
+      en: {
+        edit: "Edit",
+        addNode: "Add Course",
+        editNode: "Edit Course",
+        addEdge: "Draw Prerequisite",
+        editEdge: "Edit Prerequisite",
+        del: "Delete Selected",
+        back: "Cancel",
+        addDescription: "Click in an empty space to place a new course.",
+        edgeDescription:
+          "Click on a course and drag the line to another course to connect them.",
+        editEdgeDescription:
+          "Click on the control points and drag them to a course to connect to it.",
+        createEdgeError: "Cannot link prerequisites to a cluster.",
+        deleteClusterError: "Clusters cannot be deleted.",
+        editClusterError: "Clusters cannot be edited.",
+      },
+    },
     layout: {
       hierarchical: {
         enabled: true,
@@ -60,6 +80,7 @@ export function getVisNetworkOptions(nodes, edges) {
       dragView: true,
       hover: true,
       zoomView: true,
+      zoomSpeed: 0.4,
       tooltipDelay: 200,
       navigationButtons: true,
       keyboard: true,
