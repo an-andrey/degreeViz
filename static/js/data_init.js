@@ -1,68 +1,62 @@
-import { parseSemesterToColor } from "./utils.js";
+import { generateNodeLabel, getStatusColor } from "./node_utils.js";
 
 export function initializeNodes(detailsData) {
-  const nodes = new vis.DataSet();
-  if (Object.keys(detailsData).length === 0) {
-    console.warn(
-      "detailsData is empty. The graph might not display any nodes.",
-    );
-  }
-  for (const courseId in detailsData) {
-    if (detailsData.hasOwnProperty(courseId)) {
-      const detail = detailsData[courseId];
-      nodes.add({
-        id: courseId,
-        label: `${courseId}\n${detail.title || "Unknown Title"}\n(${
-          detail.credits || "N/A"
-        } credits)\n${detail.semesters_offered || "Unknown"}`,
-        color: detail.color || parseSemesterToColor(detail.semesters_offered),
-        shape: "box",
-        font: { multi: "html", align: "center" },
-        original_title: detail.title || "Unknown Title",
-        original_credits: detail.credits || "N/A",
-        original_semesters_offered: detail.semesters_offered || "Unknown",
-        x: detail.x,
-        y: detail.y,
-      });
-    }
-  }
-  return nodes;
+  const nodesArray = [];
+
+  Object.keys(detailsData).forEach((nodeId) => {
+    const course = detailsData[nodeId];
+
+    if (!course.code) course.code = nodeId; // Fallback to ID for default courses
+    if (!course.category || course.category === "undefined")
+      course.category = "CORE";
+    if (!course.status || course.status === "undefined")
+      course.status = "Unassigned";
+    if (!course.planned_semester || course.planned_semester === "undefined")
+      course.planned_semester = "Unassigned";
+    if (!course.credits) course.credits = "3";
+
+    // 2. BUILD THE NODE USING THE SINGLE SOURCE OF TRUTH
+    nodesArray.push({
+      id: nodeId,
+      x: course.x,
+      y: course.y,
+      label: generateNodeLabel(
+        course.code,
+        course.title,
+        course.credits,
+        course.semesters_offered,
+        course.category,
+        course.planned_semester,
+      ),
+      color: getStatusColor(course.status), // Overrides Python's hardcoded colors!
+    });
+  });
+
+  return new vis.DataSet(nodesArray);
 }
 
 export function initializeEdges(prereqsData, nodes) {
-  const edges = new vis.DataSet();
-  for (const courseId in prereqsData) {
-    if (prereqsData.hasOwnProperty(courseId)) {
-      const prerequisites = prereqsData[courseId];
-      if (Array.isArray(prerequisites)) {
-        prerequisites.forEach((prereqId) => {
-          if (nodes.get(prereqId) && nodes.get(courseId)) {
-            edges.add({
-              from: prereqId,
-              to: courseId,
-              arrows: "to",
-              smooth: {
-                enabled: true,
-                type: "cubicBezier",
-                forceDirection: "horizontal",
-                roundness: 0.4,
-              },
-            });
-          } else {
-            if (!nodes.get(prereqId)) {
-              console.warn(
-                `Prerequisite source node ${prereqId} for course ${courseId} not found. Edge not created.`,
-              );
-            }
-            if (!nodes.get(courseId)) {
-              console.warn(
-                `Prerequisite target node ${courseId} (from ${prereqId}) not found. Edge not created.`,
-              );
-            }
-          }
-        });
-      }
+  const edgesArray = [];
+  Object.keys(prereqsData).forEach((toNode) => {
+    const reqs = prereqsData[toNode];
+    if (Array.isArray(reqs)) {
+      reqs.forEach((fromNode) => {
+        // Only draw the edge if both nodes actually exist on the canvas
+        if (nodes.get(fromNode) && nodes.get(toNode)) {
+          edgesArray.push({
+            from: fromNode,
+            to: toNode,
+            arrows: "to",
+            smooth: {
+              enabled: true,
+              type: "cubicBezier",
+              forceDirection: "horizontal",
+              roundness: 0.4,
+            },
+          });
+        }
+      });
     }
-  }
-  return edges;
+  });
+  return new vis.DataSet(edgesArray);
 }

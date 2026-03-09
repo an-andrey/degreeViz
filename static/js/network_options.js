@@ -1,9 +1,30 @@
-// filepath: c:\Users\anamb\OneDrive\Desktop\Code\python\degreeViz\static\js\visNetworkOptions.js
 import { parseSemesterToColor } from "./utils.js";
 import { markGraphDirty, openCustomPrompt } from "./ui_handler.js";
+import { generateNodeLabel, getStatusColor } from "./node_utils.js";
+import { updateSheetView } from "./sheet_view.js";
 
 export function getVisNetworkOptions(nodes, edges) {
   return {
+    locale: "en",
+    locales: {
+      en: {
+        edit: "Edit",
+        addNode: "Add Course",
+        editNode: "Edit Course",
+        addEdge: "Draw Prerequisite",
+        editEdge: "Edit Prerequisite",
+        del: "Delete Selected",
+        back: "Cancel",
+        addDescription: "Click in an empty space to place a new course.",
+        edgeDescription:
+          "Click on a course and drag the line to another course to connect them.",
+        editEdgeDescription:
+          "Click on the control points and drag them to a course to connect to it.",
+        createEdgeError: "Cannot link prerequisites to a cluster.",
+        deleteClusterError: "Clusters cannot be deleted.",
+        editClusterError: "Clusters cannot be edited.",
+      },
+    },
     layout: {
       hierarchical: {
         enabled: true,
@@ -18,24 +39,25 @@ export function getVisNetworkOptions(nodes, edges) {
         shakeTowards: "roots",
       },
     },
-    physics: {
-      enabled: false,
-    },
+    physics: { enabled: false },
     nodes: {
-      // Global node options
       shape: "box",
+      borderWidth: 2,
+      borderWidthSelected: 2,
       font: {
-        // Basic font properties
         multi: "html",
         align: "center",
-        // size: 14, // Default font size if needed
-      },
-      scaling: {
-        label: {
-          enabled: true, // Ensure label scaling is enabled to use its sub-options
-          drawThreshold: 0,
+        size: 14, // Base size for normal text, <b>, and <i>
+        color: "#000000",
+        face: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+        mono: {
+          // Targets the <code> tag!
+          size: 24, // Massive course codes!
+          face: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          vadjust: 2, // Slight vertical adjustment to keep it centered
         },
       },
+      scaling: { label: { enabled: true, drawThreshold: 0 } },
     },
     edges: {
       color: {
@@ -58,6 +80,7 @@ export function getVisNetworkOptions(nodes, edges) {
       dragView: true,
       hover: true,
       zoomView: true,
+      zoomSpeed: 0.4,
       tooltipDelay: 200,
       navigationButtons: true,
       keyboard: true,
@@ -71,238 +94,309 @@ export function getVisNetworkOptions(nodes, edges) {
           title: "Add New Course",
           submitText: "Add Course",
           fields: [
-            { id: "code", label: "Course ID", placeholder: "e.g., COMP 202" },
+            { id: "code", label: "Course Code", placeholder: "e.g. COMP 250" },
             {
               id: "title",
               label: "Course Title",
-              placeholder: "e.g., Foundations of Programming",
+              placeholder: "e.g. Intro to CS",
             },
-            { id: "credits", label: "Credits", defaultValue: "3" },
+            {
+              id: "credits",
+              label: "Credits",
+              type: "number",
+              defaultValue: "3",
+            },
+            {
+              id: "category",
+              label: "Category",
+              type: "select",
+              options: ["CORE", "ELECTIVE", "COMPLEMENTARY"],
+              defaultValue: "CORE",
+            },
             {
               id: "semesters",
               label: "Semesters Offered",
-              defaultValue: "Fall, Winter",
+              type: "semester_builder",
             },
           ],
           onSubmit: (data) => {
-            if (!data.code || !data.title) {
-              alert("Course ID and Title are required.");
-              return callback(null);
+            if (!data.title || !data.code) {
+              callback(null);
+              return false; // Keep modal open if empty
             }
-            if (nodes.get(data.code)) {
-              alert("A course with this ID already exists!");
-              return callback(null);
+
+            // UNIQUE COURSE CHECK: Safely checks older nodes that might lack a .code property
+            const codeExists = Object.entries(detailsData).some(
+              ([key, course]) => {
+                const existingCode = course.code || key; // Fallback to the dictionary key for older nodes
+                return existingCode.toUpperCase() === data.code.toUpperCase();
+              },
+            );
+
+            if (codeExists) {
+              alert(
+                `Error: The course ${data.code.toUpperCase()} is already on your graph!`,
+              );
+              callback(null);
+              return false; // Tells ui_handler to KEEP THE MODAL OPEN
             }
+
+            const newLabel = generateNodeLabel(
+              data.code,
+              data.title,
+              data.credits,
+              data.semesters,
+              data.category,
+              data.status,
+            );
+
+            const newNode = {
+              id: nodeData.id,
+              x: nodeData.x,
+              y: nodeData.y,
+              code: data.code.toUpperCase(),
+              original_title: data.title,
+              original_credits: data.credits,
+              original_semesters_offered: data.semesters,
+              category: data.category,
+              label: newLabel,
+              color: getStatusColor(nodeData.status),
+            };
+
+            callback(null);
+            nodes.add(newNode);
+
+            detailsData[newNode.id] = {
+              code: newNode.code,
+              title: data.title,
+              credits: data.credits,
+              category: data.category,
+              semesters_offered: data.semesters,
+              status: "TO TAKE",
+              planned_semester: "Unassigned",
+              color: newNode.color,
+              x: newNode.x,
+              y: newNode.y,
+            };
+            prereqsData[newNode.id] = [];
 
             const queryParams = new URLSearchParams({
               request: "add node",
-              code: data.code,
-              title: data.title,
+              node_id: newNode.id,
+              code: newNode.code,
+              node_title: data.title,
               credits: data.credits,
+              category: data.category,
               semesters_offered: data.semesters,
-              x: nodeData.x,
-              y: nodeData.y,
             }).toString();
-
-            callback(null); // Close vis-network UI securely
-
             fetch(`/modify_graph?${queryParams}`, {
               method: "GET",
               headers: { "X-Requested-With": "XMLHttpRequest" },
             }).then((response) => {
-              if (response.ok) {
-                markGraphDirty();
-                window.location.href = response.url; // Refresh to show node
-              }
+              if (response.ok) markGraphDirty();
             });
+
+            return true; // Success! Close the modal.
           },
         });
       },
 
       editNode: function (nodeData, callback) {
+        const dData = detailsData[nodeData.id] || {};
+        const currentCode = dData.code || nodeData.id;
+        const currentCategory = dData.category || "CORE";
+
         openCustomPrompt({
           title: "Edit Course",
           submitText: "Save Changes",
           fields: [
+            { id: "code", label: "Course Code", defaultValue: currentCode },
             {
               id: "title",
               label: "Course Title",
-              defaultValue: nodeData.original_title,
+              defaultValue: dData.title || "",
             },
             {
               id: "credits",
               label: "Credits",
-              defaultValue: nodeData.original_credits,
+              defaultValue: dData.credits || "3",
+            },
+            {
+              id: "category",
+              label: "Category",
+              type: "select",
+              options: ["CORE", "ELECTIVE", "COMPLEMENTARY"],
+              defaultValue: currentCategory,
             },
             {
               id: "semesters",
               label: "Semesters Offered",
-              defaultValue: nodeData.original_semesters_offered,
+              type: "semester_builder",
+              defaultValue: dData.semesters_offered || "Unknown",
             },
           ],
           onSubmit: (data) => {
-            if (!data.title) return callback(null);
+            if (!data.title || !data.code) {
+              callback(null);
+              return false;
+            }
 
-            nodeData.original_title = data.title;
-            nodeData.original_credits = data.credits;
-            nodeData.original_semesters_offered = data.semesters;
-            nodeData.label = `${nodeData.id}\n${data.title}\n(${data.credits} credits)\n${data.semesters}`;
-            nodeData.color = parseSemesterToColor(data.semesters);
+            const codeExists = Object.entries(detailsData).some(
+              ([key, course]) => {
+                if (key === nodeData.id) return false;
+                const existingCode = course.code || key;
+                return existingCode.toUpperCase() === data.code.toUpperCase();
+              },
+            );
 
-            callback(nodeData); // Update Graph Visually
+            if (codeExists) {
+              alert(
+                `Error: Cannot rename to ${data.code.toUpperCase()} because it already exists!`,
+              );
+              callback(null);
+              return false;
+            }
+
+            // Update the single source of truth First!
+            if (detailsData[nodeData.id]) {
+              detailsData[nodeData.id].code = data.code.toUpperCase();
+              detailsData[nodeData.id].title = data.title;
+              detailsData[nodeData.id].credits = data.credits;
+              detailsData[nodeData.id].semesters_offered = data.semesters;
+              detailsData[nodeData.id].category = data.category;
+            }
+
+            // Tell Vis-Network to update the visuals
+            nodeData.label = generateNodeLabel(
+              detailsData[nodeData.id].code,
+              data.title,
+              data.credits,
+              data.semesters,
+              data.category,
+              detailsData[nodeData.id].planned_semester,
+              detailsData[nodeData.id].status,
+            );
+            nodeData.color = getStatusColor(detailsData[nodeData.id].status); // Use status color!
+
+            callback(nodeData);
 
             const queryParams = new URLSearchParams({
               request: "edit node",
-              code: nodeData.id,
+              node_id: nodeData.id,
+              code: detailsData[nodeData.id].code,
               node_title: data.title,
               credits: data.credits,
+              category: data.category,
               semesters_offered: data.semesters,
             }).toString();
-
             fetch(`/modify_graph?${queryParams}`, {
               method: "GET",
               headers: { "X-Requested-With": "XMLHttpRequest" },
             }).then((response) => {
-              if (response.ok) {
-                markGraphDirty();
-              }
+              if (response.ok) markGraphDirty();
             });
+
+            return true;
           },
         });
       },
       deleteNode: function (dataToDelete, callback) {
-        const nodeIdToDelete = dataToDelete.nodes[0];
-        if (!nodeIdToDelete || !nodes.get(nodeIdToDelete)) {
-          console.warn(
-            `Node ${nodeIdToDelete} not found or invalid for deletion.`,
-          );
+        if (!dataToDelete.nodes || dataToDelete.nodes.length === 0)
           return callback(null);
-        }
 
-        const queryParams = new URLSearchParams({
-          request: "delete node",
-          code: nodeIdToDelete,
-        }).toString();
+        // Loop through EVERY node the user selected for deletion
+        dataToDelete.nodes.forEach((nodeIdToDelete) => {
+          if (!nodes.get(nodeIdToDelete)) return;
 
-        callback(dataToDelete);
-
-        // Making request to server to update session itself
-        fetch(`/modify_graph?${queryParams}`, {
-          method: "GET", // Or 'POST'
-          headers: { "X-Requested-With": "XMLHttpRequest" },
-        }).then((response) => {
-          if (response.ok) {
-            markGraphDirty(); // allow graph to update
-          } else {
-            console.log("failed to delete node");
+          // 1. DELETE FROM LOCAL JAVASCRIPT MEMORY
+          if (detailsData[nodeIdToDelete]) {
+            delete detailsData[nodeIdToDelete];
           }
+          if (prereqsData[nodeIdToDelete]) {
+            delete prereqsData[nodeIdToDelete];
+          }
+
+          // 2. Scrub this node from any other course's prerequisites list locally
+          for (let key in prereqsData) {
+            prereqsData[key] = prereqsData[key].filter(
+              (id) => id !== nodeIdToDelete,
+            );
+          }
+
+          // 3. Tell Python about this specific node
+          fetch(`/modify_graph?request=delete node&node_id=${nodeIdToDelete}`, {
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+          }).then((response) => {
+            if (response.ok) {
+              markGraphDirty();
+              updateSheetView(detailsData); // Instantly recalibrates the Sheet View!
+            }
+          });
         });
+
+        callback(dataToDelete); // Removes all of them from the visual canvas
       },
+
       addEdge: function (edgeData, callback) {
-        // edgeData contains from, to, and potentially other properties
-        const fromNodeId = edgeData.from;
-        const toNodeId = edgeData.to;
+        if (edgeData.from === edgeData.to) return callback(null);
+        if (
+          edges.get({
+            filter: (e) => e.from === edgeData.from && e.to === edgeData.to,
+          }).length > 0
+        )
+          return callback(null);
 
-        if (fromNodeId === toNodeId) {
-          alert("Cannot link a course to itself.");
-          callback(null); // Cancel adding the edge
-          return;
+        // 1. Add edge to local memory
+        if (!prereqsData[edgeData.to]) prereqsData[edgeData.to] = [];
+        if (!prereqsData[edgeData.to].includes(edgeData.from)) {
+          prereqsData[edgeData.to].push(edgeData.from);
         }
 
-        // Check if an edge already exists (client-side check)
-        const existingEdges = edges.get({
-          filter: (edge) => edge.from === fromNodeId && edge.to === toNodeId,
-        });
-
-        if (existingEdges.length > 0) {
-          alert(`An edge from ${fromNodeId} to ${toNodeId} already exists.`);
-          callback(null); // Cancel adding the edge
-          return;
-        }
-
-        // If all checks pass, optimistically update the client-side graph
-        // You might want to assign a temporary ID or let vis.js handle it
-        // For simplicity, we'll let vis.js assign an ID if not provided
-        edgeData.arrows = "to"; // Or your default arrow type
+        edgeData.arrows = "to";
         edgeData.smooth = {
-          // Or your default smooth options
           enabled: true,
           type: "cubicBezier",
           forceDirection: "horizontal",
           roundness: 0.4,
         };
 
-        callback(edgeData); // This adds the edge to the local vis.js graph
+        callback(edgeData); // Adds to canvas
 
-        // Now, send an asynchronous request to the server to update the session
-        const queryParams = new URLSearchParams({
-          request: "add edge", // Ensure server expects "add_edge"
-          from_node: fromNodeId,
-          to_node: toNodeId,
-        }).toString();
-
-        fetch(`/modify_graph?${queryParams}`, {
-          method: "GET", // Or 'POST' if you prefer, adjust server accordingly
-          headers: {
-            "X-Requested-With": "XMLHttpRequest", // Often used to identify AJAX requests
-          },
-        }).then((response) => {
-          if (response.ok) {
-            markGraphDirty(); // allow graph to update
-          } else {
-            console.log("failed to add edge");
-          }
+        // 2. Tell Python
+        fetch(
+          `/modify_graph?request=add edge&from_node=${edgeData.from}&to_node=${edgeData.to}`,
+          { headers: { "X-Requested-With": "XMLHttpRequest" } },
+        ).then((response) => {
+          if (response.ok) markGraphDirty();
         });
       },
+
       deleteEdge: function (dataToDelete, callback) {
-        // dataToDelete contains {edges: [edgeId1, edgeId2,...], nodes: []}
-        const edgeIdsToDelete = dataToDelete.edges;
+        if (!dataToDelete.edges || dataToDelete.edges.length === 0)
+          return callback(null);
 
-        if (!edgeIdsToDelete || edgeIdsToDelete.length === 0) {
-          console.warn("deleteEdge called but no edge IDs were provided.");
-          callback(null);
-          return;
-        }
+        // Loop through EVERY edge the user selected for deletion
+        dataToDelete.edges.forEach((edgeId) => {
+          const edgeObject = edges.get(edgeId);
+          if (!edgeObject) return;
 
-        // For simplicity, let's assume we only handle one edge deletion at a time via UI.
-        // If multiple edges can be selected and deleted, you'd loop or send all.
-        const edgeId = edgeIdsToDelete[0];
-        const edgeObject = edges.get(edgeId); // Get the edge from client-side DataSet
-
-        if (!edgeObject) {
-          console.warn(`Edge with ID "${edgeId}" not found locally.`);
-          callback(null);
-          return;
-        }
-
-        const fromNodeId = edgeObject.from;
-        const toNodeId = edgeObject.to;
-
-        // Optimistically remove the edge from the client-side graph
-        callback(dataToDelete); // This removes the edge(s) from local vis.js graph
-
-        // Send asynchronous request to the server
-        const queryParams = new URLSearchParams({
-          request: "delete edge", // Ensure server expects "delete_edge"
-          from_node: fromNodeId,
-          to_node: toNodeId,
-          // If your server needs the specific edge ID (vis.js internal ID)
-          // you could send it too, but from/to is usually how prereqs are stored.
-          // edge_id: edgeId
-        }).toString();
-
-        fetch(`/modify_graph?${queryParams}`, {
-          method: "GET", // Or 'POST'
-          headers: {
-            "X-Requested-With": "XMLHttpRequest",
-          },
-        }).then((response) => {
-          if (response.ok) {
-            markGraphDirty(); // allow graph to update
-          } else {
-            console.log("failed to edit node");
+          // 1. Remove edge from local memory
+          if (prereqsData[edgeObject.to]) {
+            prereqsData[edgeObject.to] = prereqsData[edgeObject.to].filter(
+              (id) => id !== edgeObject.from,
+            );
           }
+
+          // 2. Tell Python about this specific edge
+          fetch(
+            `/modify_graph?request=delete edge&from_node=${edgeObject.from}&to_node=${edgeObject.to}`,
+            { headers: { "X-Requested-With": "XMLHttpRequest" } },
+          ).then((response) => {
+            if (response.ok) markGraphDirty();
+          });
         });
+
+        callback(dataToDelete); // Removes all selected edges from canvas
       },
     },
   };
