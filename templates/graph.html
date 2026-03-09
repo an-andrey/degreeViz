@@ -8,41 +8,35 @@
   document.querySelector(".page-container").classList.add("graph-wrapper");
 </script>
 
-<div class="workspace-container">
-  <div class="tabs-header">
-    <button class="tab-btn active" onclick="switchTab('graph')">
-      Visual Graph
-    </button>
-    <button class="tab-btn" onclick="switchTab('sheet')">
-      Sheet View (Beta)
-    </button>
+<div class="global-header-container">
+    <div class="tabs-header">
+      <button class="tab-btn active" onclick="switchTab('graph')">
+        Visual Graph
+      </button>
+      <button class="tab-btn" onclick="switchTab('sheet')">
+        Sheet View
+      </button>
+    </div>
+    
+    <div class="global-actions-right">
+      <button id="undoBtn" class="icon-action-btn" disabled title="Undo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>
+      </button>
+      <button id="redoBtn" class="icon-action-btn" disabled title="Redo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7v6h-6"></path><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7"></path></svg>
+      </button>
+      <button id="saveGraphBtn" class="global-save-btn">Save to Profile</button>
+    </div>
   </div>
 
   <div class="graph-wrapper">
     <div id="graph-content" class="tab-content active">
       <div class="custom-manipulation-buttons">
-        <button id="saveGraphBtn">Save Graph to Profile</button>
         <a href="{{url_for('add_program_form')}}" style="text-decoration: none">
           <button id="addProgramToGraphBtn" type="button">
             Add Another Program to Graph
           </button>
         </a>
-        <button
-          id="undoBtn"
-          class="action-button"
-          disabled
-          style="background-color: var(--text-muted)"
-        >
-          Undo
-        </button>
-        <button
-          id="redoBtn"
-          class="action-button"
-          disabled
-          style="background-color: var(--text-muted)"
-        >
-          Redo
-        </button>
       </div>
       <div id="courseNetwork"></div>
 
@@ -66,6 +60,7 @@
         <div class="inspector-controls">
           <label>Status</label>
           <select id="inspectorStatus">
+            <option value="Unassigned">Unassigned</option>
             <option value="TO TAKE">To Take</option>
             <option value="TAKING">Taking</option>
             <option value="DONE">Done</option>
@@ -87,18 +82,100 @@
 
     <div id="sheet-content" class="tab-content">
       <div class="sheet-header">
-        <h3>Semester Plan & Credits</h3>
-        <div class="progress-hud">
-          <span class="hud-stat"><strong>0 / 90</strong> Total Credits</span>
-          <span class="hud-stat"><strong>0 / 76</strong> Major Credits</span>
-        </div>
+        <h3>Degree Progress & Semester Plan (DONE or TAKING courses)</h3>
       </div>
-      <div class="table-placeholder">
-        <p
-          style="color: var(--text-muted); text-align: center; padding: 40px 0"
-        >
-          <em>Data table will be injected here by Python...</em>
-        </p>
+
+      <div class="sheet-tables-container">
+        <div class="table-card">
+          <h4>Category Total</h4>
+          <table class="styled-table" id="categoryTable">
+            <thead>
+              <tr>
+                <th>Category</th>
+                <th style="text-align: center">Required</th>
+                <th>Taken/Taking</th>
+                <th>Remaining</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>CORE</strong></td>
+                <td>
+                  <input
+                    type="number"
+                    id="req-core"
+                    class="req-input"
+                    value="0"
+                    min="0"
+                  />
+                </td>
+                <td id="taken-core">0</td>
+                <td id="rem-core" class="bold-red">0</td>
+              </tr>
+              <tr>
+                <td><strong>COMPLEMENTARY</strong></td>
+                <td>
+                  <input
+                    type="number"
+                    id="req-comp"
+                    class="req-input"
+                    value="0"
+                    min="0"
+                  />
+                </td>
+                <td id="taken-comp">0</td>
+                <td id="rem-comp" class="bold-red">0</td>
+              </tr>
+              <tr>
+                <td><strong>ELECTIVE</strong></td>
+                <td>
+                  <input
+                    type="number"
+                    id="req-elec"
+                    class="req-input"
+                    value="0"
+                    min="0"
+                  />
+                </td>
+                <td id="taken-elec">0</td>
+                <td id="rem-elec" class="bold-red">0</td>
+              </tr>
+              <tr class="total-row">
+                <td><strong>TOTAL</strong></td>
+                <td>
+                  <input
+                    type="number"
+                    id="req-total"
+                    class="req-input"
+                    value="0"
+                    disabled
+                    style="
+                      background: transparent;
+                      border: none;
+                      opacity: 1;
+                      font-size: 1.05em;
+                    "
+                  />
+                </td>
+                <td id="taken-total">0</td>
+                <td id="rem-total">90</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="table-card">
+          <h4>Per Semester Load</h4>
+          <table class="styled-table">
+            <thead>
+              <tr>
+                <th>Semester</th>
+                <th>Total Credits</th>
+              </tr>
+            </thead>
+            <tbody id="semesterTableBody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
@@ -111,11 +188,23 @@
 ></script>
 
 <script type="text/javascript">
-    const prereqsData = {{ prereqs|tojson }};
-    const detailsData = {{ details|tojson }};
-    const serverScheduleId = {{ session.get('schedule_id') | tojson | safe }};
+  const prereqsData = {{ prereqs|tojson }};
+  const detailsData = {{ details|tojson }};
+  const serverScheduleId = {{ session.get('schedule_id') | tojson | safe }};
 
-    function switchTab(targetTab) {
+  // 1. PULL the requirements from the Flask session (defaults to 0 if brand new)
+  const savedReqs = {{ session.get('credit_requirements', {'core': 0, 'comp': 0, 'elec': 0}) | tojson | safe }};
+
+  // 2. INJECT the numbers into the HTML boxes the second the page loads
+  document.addEventListener("DOMContentLoaded", () => {
+      if (savedReqs) {
+          document.getElementById("req-core").value = savedReqs.core || 0;
+          document.getElementById("req-comp").value = savedReqs.comp || 0;
+          document.getElementById("req-elec").value = savedReqs.elec || 0;
+      }
+  });
+
+  function switchTab(targetTab) {
     // 1. Remove 'active' class from all buttons and content
     document
       .querySelectorAll(".tab-btn")

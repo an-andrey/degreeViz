@@ -86,18 +86,26 @@ function updateSaveButtonUI() {
 
   if (currentScheduleId) {
     if (isGraphDirty) {
-      btn.textContent = "Update Graph";
+      btn.textContent = "Save Changes";
       btn.disabled = false;
-      btn.style.backgroundColor = "var(--mcgill-red)";
+      btn.classList.add("needs-saving"); // Adds the glowing pulse from your CSS
+      btn.style.backgroundColor = ""; // Lets the CSS class take over
     } else {
-      btn.textContent = "Graph up to date";
+      btn.textContent = "Up to date";
       btn.disabled = true;
+      btn.classList.remove("needs-saving");
       btn.style.backgroundColor = "var(--border-color)"; // Gray when up to date
     }
   } else {
-    btn.textContent = "Save Graph to Profile";
+    // Brand new graph
+    btn.textContent = "Save to Profile";
     btn.disabled = false;
     btn.style.backgroundColor = "var(--mcgill-red)";
+    if (isGraphDirty) {
+      btn.classList.add("needs-saving");
+    } else {
+      btn.classList.remove("needs-saving");
+    }
   }
 }
 
@@ -176,6 +184,12 @@ export function setupSaveButtonHandler(network, nodes, edges) {
             schedule_name: scheduleName,
             details_data: detailsData,
             prereqs_data: prereqsData,
+
+            credit_requirements: {
+              core: parseFloat(document.getElementById("req-core")?.value) || 0,
+              comp: parseFloat(document.getElementById("req-comp")?.value) || 0,
+              elec: parseFloat(document.getElementById("req-elec")?.value) || 0,
+            },
           }),
         });
 
@@ -402,8 +416,12 @@ export function openCustomPrompt({ title, submitText, fields, onSubmit }) {
         results[field.id] = el.value;
       }
     });
-    onSubmit(results);
-    cleanup();
+
+    // If onSubmit explicitly returns false, DO NOT close the modal
+    const success = onSubmit(results);
+    if (success !== false) {
+      cleanup();
+    }
   };
 
   cancelBtn.onclick = cleanup;

@@ -235,35 +235,44 @@ button:disabled {
   position: relative;
 }
 
-/* Tabs sitting perfectly on top of the border */
+/* --- Fixed Tabs Header --- */
 .tabs-header {
   display: flex;
-  gap: 5px;
-  padding-left: 20px; /* Aligns visually with the padding inside the box */
-  margin-bottom: -15px; /* Overlaps the box border perfectly */
-  position: relative;
+  gap: 4px; /* Slight gap looks cleaner with transparent tabs */
+  margin-bottom: -2px;
   z-index: 2;
 }
 
+/* --- Clean, Modern Tab Buttons --- */
 .tab-btn {
-  background-color: #f0f0f0; /* Soft gray for inactive tabs */
-  border: 1px solid var(--border-color);
+  background-color: transparent;
+  border: 2px solid var(--border-color);
   border-bottom: none;
-  padding: 10px 24px;
+  padding: 12px 24px;
   font-size: 0.95em;
   font-weight: 600;
   color: var(--text-muted);
   cursor: pointer;
-  border-radius: 8px 8px 0 0;
+  border-radius: 6px 6px 0 0; /* Tighter, more professional curve */
   margin: 0;
   transition: all 0.2s ease;
 }
 
+/* Subtle, clean hover effect instead of turning black */
+.tab-btn:hover:not(.active) {
+  background-color: rgba(0, 0, 0, 0.04);
+  color: var(--text-main);
+}
+
+/* --- The Active Tab --- */
 .tab-btn.active {
-  background-color: var(--surface-color); /* Matches the white box */
+  background-color: var(--surface-color); /* Pure white */
   color: var(--mcgill-red);
-  border-top: 3px solid var(--mcgill-red);
-  padding-bottom: 11px; /* Extra pixel to cover the border underneath */
+  border-bottom: 2px solid var(--surface-color); /* Erases the line underneath */
+
+  /* The Magic Fix: Uses an inner shadow to draw a perfect red line 
+     that naturally hugs the curves without looking warped! */
+  box-shadow: inset 0 3px 0 0 var(--mcgill-red);
 }
 
 /* --- Graph Container --- */
@@ -1183,4 +1192,193 @@ select.badge-select:focus {
 }
 .mt-15 {
   margin-top: 15px;
+}
+
+/* --- Sheet View Tables --- */
+.sheet-tables-container {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+/* Upgraded to exactly match your .card and .program-card styles */
+.table-card {
+  flex: 1;
+  background-color: var(--surface-color);
+  padding: 35px 30px; /* Increased top padding to make room for the red stripe */
+  border: 2px solid var(--text-main); /* Thick black outline */
+  border-radius: 8px;
+  position: relative; /* Required to anchor the red stripe */
+  overflow: hidden; /* Clips the red stripe so it stays inside the rounded corners */
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15); /* Stronger shadow to match modals */
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+/* The McGill red stripe at the top */
+.table-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 12px;
+  background-color: var(--mcgill-red);
+}
+
+/* Added the subtle lift effect back in */
+.table-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+}
+
+/* Header styling to match the auth modal's <h3> */
+.table-card h4 {
+  color: var(--text-main);
+  text-align: center;
+  font-size: 1.4em;
+  margin-top: 5px;
+  margin-bottom: 25px;
+  border-bottom: none; /* Removes the old thin red underline */
+  padding-bottom: 0;
+}
+
+.styled-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+
+/* Center ALL columns by default (This perfectly centers the numbers) */
+.styled-table th,
+.styled-table td {
+  padding: 12px 8px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-main);
+  vertical-align: middle;
+  text-align: center;
+}
+
+/* Override: Keep ONLY the first column (Category/Semester names) left-aligned */
+.styled-table th:first-child,
+.styled-table td:first-child {
+  text-align: left;
+}
+
+.styled-table .total-row td {
+  border-top: 2px solid var(--text-main);
+  border-bottom: none;
+  font-size: 1.05em;
+}
+
+.bold-red {
+  font-weight: 700;
+  color: var(--mcgill-red) !important;
+}
+
+/* Editable Requirement Inputs */
+.req-input {
+  width: 60px;
+  padding: 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  font-family: inherit;
+  font-weight: 600;
+  color: var(--text-main);
+  text-align: center;
+  transition: border-color 0.2s;
+  /* Centering fix for the inputs within the centered columns */
+  margin: 0 auto;
+  display: block;
+}
+
+.req-input:focus {
+  outline: none;
+  border-color: var(--mcgill-red);
+}
+
+/* --- Global Header Container --- */
+.global-header-container {
+  display: flex;
+  justify-content: space-between; /* This forces the two inner divs to opposite sides */
+  align-items: flex-end; /* Keeps the buttons aligned with the bottom of the tabs */
+  width: 100%; /* Ensures the container stretches across the whole page */
+  border-bottom: 2px solid var(--border-color);
+  margin-bottom: 20px;
+}
+
+/* --- Global Actions Container --- */
+.global-actions-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-left: auto; /* A bulletproof way to push this container to the far right */
+  margin-bottom: 8px; /* Keeps it visually flush with the tab baseline */
+}
+/* --- Global Save Button --- */
+.global-save-btn {
+  background-color: var(--text-main); /* Standard dark gray */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 0.95em;
+  cursor: pointer;
+  margin-bottom: 0;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.global-save-btn:hover {
+  background-color: var(--mcgill-red); /* Turns red on hover! */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(237, 27, 47, 0.2);
+}
+
+.global-save-btn.needs-saving {
+  background-color: var(--mcgill-red) !important;
+  color: white !important;
+}
+
+.global-save-btn.needs-saving:hover {
+  background-color: var(
+    --mcgill-red-hover
+  ) !important; /* Darker red hover when dirty */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(237, 27, 47, 0.3);
+}
+
+/* --- SVG Icon Buttons (Undo/Redo) --- */
+.icon-action-btn {
+  background: var(--mcgill-red);
+  border: 1.5px solid var(--mcgill-red);
+  border-radius: 6px;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.icon-action-btn:hover:not(:disabled) {
+  background-color: var(--mcgill-red-hover);
+  border-color: var(--mcgill-red-hover);
+  color: white; /* SVG stroke turns pure white */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(237, 27, 47, 0.2);
+}
+
+.icon-action-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  border-color: var(--border-color);
+  background-color: #fcfcfc;
+  color: var(--text-muted);
+  box-shadow: none;
 }

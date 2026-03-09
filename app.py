@@ -194,76 +194,57 @@ def modify_nodes():
 
 
     #Fro some reason, not able to add node on client side, so refreshing page with new info manually
-    if request_type == "add node":
-        # Extract data from query parameters
-        code = request.args.get('code')
-        credits = request.args.get('credits', "N/A")
-        title = request.args.get("title")
+    if request_type == "add node":  # Changed from elif to if
+        node_id = request.args.get("node_id")
+        code = request.args.get("code")
+        title = request.args.get("node_title")
+        credits = request.args.get('credits', "3")
+        category = request.args.get("category", "CORE")
         semesters_offered = request.args.get('semesters_offered', "Unknown")
-        x = request.args.get('x')
-        y = request.args.get('y')
-
-        # Add the node in details_data
-        details[code] = {
-            "title": title, 
-            "credits": credits,
-            "semesters_offered": semesters_offered,
-            "x": x,
-            "y": y,
-            "color": utils.parse_semester_to_color(semesters_offered)
-        }
         
-        prereqs[code] = []
-
-        session['details_data'] = details
-        session['prereqs_data'] = prereqs
-
-        session.modified = True
-        print("updated session after adding node")
-        return redirect(url_for('graph'))
+        if node_id:
+            details[node_id] = {
+                "code": code,
+                "title": title,
+                "credits": credits,
+                "category": category,
+                "semesters_offered": semesters_offered,
+                "status": "TO TAKE",
+                "planned_semester": "Unassigned",
+            }
+            prereqs[node_id] = []
 
     #The rest of the requests are made using asynchronous AJAX requests, info updated with session only on refresh
     elif request_type == "edit node":
-        old_code = request.args.get("old_code")
+        node_id = request.args.get("node_id") # We now use the stable ID
         code = request.args.get("code")
         credits = request.args.get('credits', "N/A")
         title = request.args.get("node_title")
         category = request.args.get("category", "CORE")
         semesters_offered = request.args.get('semesters_offered', "Unknown")
-        
-        # Handle ID Rename (If the course code changed)
-        if old_code and code and old_code != code:
-            if old_code in details:
-                details[code] = details.pop(old_code)
-            if old_code in prereqs:
-                prereqs[code] = prereqs.pop(old_code)
-            
-            # Find and replace the old course code in all prerequisite lists
-            for req_list in prereqs.values():
-                if old_code in req_list:
-                    req_list.remove(old_code)
-                    req_list.append(code)
                     
-        # Update existing info
-        if code in details:
-            details[code]["credits"] = credits
-            details[code]["title"] = title
-            details[code]["category"] = category
-            details[code]["semesters_offered"] = semesters_offered
-            details[code]["color"] = utils.parse_semester_to_color(semesters_offered)
+        # Just update the existing properties safely!
+        if node_id in details:
+            details[node_id]["code"] = code
+            details[node_id]["credits"] = credits
+            details[node_id]["title"] = title
+            details[node_id]["category"] = category
+            details[node_id]["semesters_offered"] = semesters_offered
         
     elif request_type == "delete node":
-        code = request.args.get("code")
-
-        del details[code] 
-        if code in prereqs:
-            del prereqs[code]
-
-        for course_code in list(prereqs.keys()):
-            preqreq_list = prereqs[course_code]
-
-            if code in preqreq_list:
-                preqreq_list.remove(code)
+        # Fallback to "code" just in case you delete older nodes saved before the change
+        node_id = request.args.get("node_id") or request.args.get("code")
+        
+        if node_id:
+            if node_id in details:
+                del details[node_id]
+            if node_id in prereqs:
+                del prereqs[node_id]
+                
+            # Safely scrub the deleted node from any other courses' prerequisite lists
+            for req_list in prereqs.values():
+                while node_id in req_list:
+                    req_list.remove(node_id)
         
     elif request_type == "add edge":
         from_node = request.args.get("from_node")
@@ -312,16 +293,20 @@ def save_graph():
         # if data available from updates on JS side, otherwise grab the session one
         prereqs = data.get("prereqs_data", session.get('prereqs_data', {}))
         details = data.get("details_data", session.get('details_data', {}))
+        credit_reqs = data.get("credit_requirements", {"core": 0, "comp": 0, "elec": 0})
+
 
         #update flask session with new data
         session['prereqs_data'] = prereqs
         session['details_data'] = details
+        session['credit_requirements'] = credit_reqs
 
         if schedule_id:
             # UPDATE EXISTING GRAPH
             Client.table(USER_SCHEDULES_TABLE_NAME).update({
                 "prereqs_data": prereqs,
-                "details_data": details
+                "details_data": details,
+                "credit_requirements": credit_reqs # <-- Added this to the update block!
             }).eq("id", schedule_id).eq("user_id", user_id).execute()
             
             logging.log_entry(request, f"updated graph '{schedule_id}' in database")
@@ -333,12 +318,13 @@ def save_graph():
                 "user_id": user_id,
                 "schedule_name": schedule_name,
                 "prereqs_data": prereqs,
+                "credit_requirements": credit_reqs, # <-- Added the missing comma here!
                 "details_data": details
             }).execute()
 
             # Grab the newly generated UUID and save it to the session
             new_id = response.data[0]['id']
-            session['schedule_id'] = new_id 
+            session['schedule_id'] = new_id
             
             logging.log_entry(request, f"saved new graph '{schedule_name}' to database")
             return jsonify({"status": "success", "message": "Graph saved successfully!", "schedule_id": new_id})
@@ -384,6 +370,9 @@ def load_graph():
             session['details_data'] = graph.get('details_data', {})
             session['schedule_id'] = graph.get('id')
             session['graph_data_available'] = True
+            
+            #Load the credit requirements into session memory
+            session['credit_requirements'] = graph.get('credit_requirements', {"core": 0, "comp": 0, "elec": 0})
             
             logging.log_entry(request, f"opened saved graph '{graph.get('schedule_name')}'")
             return redirect(url_for('graph'))
