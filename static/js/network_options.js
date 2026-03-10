@@ -94,18 +94,14 @@ export function getVisNetworkOptions(nodes, edges) {
           title: "Add New Course",
           submitText: "Add Course",
           fields: [
-            { id: "code", label: "Course Code", placeholder: "e.g. COMP 250" },
             {
-              id: "title",
-              label: "Course Title",
-              placeholder: "e.g. Intro to CS",
+              id: "code",
+              label: "Course Code",
+              type: "course_search",
+              required: true,
             },
-            {
-              id: "credits",
-              label: "Credits",
-              type: "number",
-              defaultValue: "3",
-            },
+            { id: "title", label: "Course Title" },
+            { id: "credits", label: "Credits", defaultValue: "3" },
             {
               id: "category",
               label: "Category",
@@ -117,6 +113,7 @@ export function getVisNetworkOptions(nodes, edges) {
               id: "semesters",
               label: "Semesters Offered",
               type: "semester_builder",
+              defaultValue: "Unknown",
             },
           ],
           onSubmit: (data) => {
@@ -172,7 +169,7 @@ export function getVisNetworkOptions(nodes, edges) {
               credits: data.credits,
               category: data.category,
               semesters_offered: data.semesters,
-              status: "TO TAKE",
+              status: "Unassigned",
               planned_semester: "Unassigned",
               color: newNode.color,
               x: newNode.x,

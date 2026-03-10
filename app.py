@@ -140,46 +140,71 @@ def add_program_form():
 @app.route("/add_program_to_graph", methods=["GET"]) # adding another program to their graph (like a minor)
 def add_program_to_graph():
     if not session.get('graph_data_available'):
-        return redirect(url_for('scrape_form', error="No active graph to add to. Please start a new one."))
+        return redirect(url_for('graph'))
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    
+    try:
+        new_program_url = request.args.get('url')
+        new_program_name = request.args.get('programName')
 
-    new_program_url = request.args.get('url')
-    new_program_name = request.args.get('programSearch') # From add_network_form.html
+        logging.log_entry(request, f"adding program {new_program_name} (url: {new_program_url}) to graph")    
 
-    logging.log_entry(request, f"adding program {new_program_name} (url: {new_program_url}) to graph")    
+        # Fetch and process data for the new program
+        new_prereqs, new_details = get_information_for_major.process_program_data(new_program_url, new_program_name)
 
-    # Fetch and process data for the new program
-    new_prereqs, new_details = get_information_for_major.process_program_data(new_program_url, new_program_name)
+        # Retrieve current graph data from session
+        current_prereqs = session.get('prereqs_data', {})
+        current_details = session.get('details_data', {})
 
-    if new_prereqs is None or new_details is None:
-        return render_template('add_network_form.html', error=f"Could not process data for {new_program_name}.")
+        # Merge details: Add new courses, prioritize existing details if a course code clashes.
+        for code, detail_data in new_details.items():
+            if code not in current_details: 
+                current_details[code] = detail_data
 
-    # Retrieve current graph data from session
-    current_prereqs = session.get('prereqs_data', {})
-    current_details = session.get('details_data', {})
+        # Merge prerequisites
+        for code, prereq_list in new_prereqs.items():
+            if code not in current_prereqs:
+                current_prereqs[code] = list(prereq_list) # Ensure it's a new list
+            else:
+                # Add only new prerequisites to the existing list for that course
+                for prereq_item in prereq_list:
+                    if prereq_item not in current_prereqs[code]:
+                        current_prereqs[code].append(prereq_item)
 
-    # Merge details: Add new courses, prioritize existing details if a course code clashes.
-    for code, detail_data in new_details.items():
-        if code not in current_details: # Only add if it's a truly new course code
-            current_details[code] = detail_data
-        # Else: if course code exists, we keep the original details.
-        # You could implement more sophisticated merging here if needed (e.g., update if new has more info)
+        session['details_data'].update(new_details)
+        session['prereqs_data'].update(new_prereqs)
+        session['graph_data_available'] = True
 
-    # Merge prerequisites
-    for code, prereq_list in new_prereqs.items():
-        if code not in current_prereqs:
-            current_prereqs[code] = list(prereq_list) # Ensure it's a new list
-        else:
-            # Add only new prerequisites to the existing list for that course
-            for prereq_item in prereq_list:
-                if prereq_item not in current_prereqs[code]:
-                    current_prereqs[code].append(prereq_item)
+        # NEW: If JavaScript asked for this, send the raw JSON data back!
+        if is_ajax:
+            return jsonify({
+                "status": "success", 
+                "new_details": new_details, 
+                "new_prereqs": new_prereqs
+            })
 
-    # Store merged data back in session
-    session['prereqs_data'] = current_prereqs
-    session['details_data'] = current_details
-    session['graph_data_available'] = True 
+        return redirect(url_for('graph'))
+        
+    except Exception as e:
+        print(f"Error scraping program: {e}")
+        if is_ajax: return jsonify({"status": "error", "message": str(e)}), 500
+        return redirect(url_for('graph'))
 
-    return redirect(url_for('graph'))
+@app.route('/update_session_coords', methods=['POST'])
+def update_session_coords():
+    """Secretly saves JavaScript-generated coordinates into the Flask session so they survive a refresh."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"status": "error", "message": "No data provided"}), 400
+
+    if 'details_data' in session:
+        for code, coords in data.items():
+            if code in session['details_data']:
+                session['details_data'][code]['x'] = coords.get('x')
+                session['details_data'][code]['y'] = coords.get('y')
+        session.modified = True # Force Flask to save the changes
+
+    return jsonify({"status": "success"})
 
 @app.route('/modify_graph', methods=['GET']) 
 def modify_nodes():
@@ -209,7 +234,7 @@ def modify_nodes():
                 "credits": credits,
                 "category": category,
                 "semesters_offered": semesters_offered,
-                "status": "TO TAKE",
+                "status": "Unassigned",
                 "planned_semester": "Unassigned",
             }
             prereqs[node_id] = []

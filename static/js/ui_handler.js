@@ -240,7 +240,6 @@ export function openCustomPrompt({ title, submitText, fields, onSubmit }) {
   const titleEl = document.getElementById("promptTitle");
   const fieldsContainer = document.getElementById("promptFieldsContainer");
   const submitBtn = document.getElementById("submitPromptBtn");
-  const cancelBtn = document.getElementById("cancelPromptBtn");
   const closeBtn = document.getElementById("closePromptModal");
   const form = document.getElementById("customPromptForm");
 
@@ -378,6 +377,224 @@ export function openCustomPrompt({ title, submitText, fields, onSubmit }) {
       group.appendChild(builderContainer);
 
       // 3. STANDARD TEXT INPUT
+    } else if (field.type === "program_search") {
+      // --- AUTO-COMPLETE SEARCH FIELD FOR PROGRAMS ---
+      const wrapper = document.createElement("div");
+      wrapper.style.position = "relative";
+
+      // 1. The Visible Input
+      const input = document.createElement("input");
+      input.type = "text";
+      input.id = `prompt_field_${field.id}_display`;
+      input.placeholder = "e.g., Mathematics Minor (Type to search...)";
+      input.style.width = "100%";
+      input.style.padding = "10px";
+      input.style.border = "1px solid var(--border-color)";
+      input.style.borderRadius = "4px";
+      input.style.boxSizing = "border-box";
+
+      // 2. The Hidden Input (Holds the URL for submission)
+      const hiddenInput = document.createElement("input");
+      hiddenInput.type = "hidden";
+      hiddenInput.id = `prompt_field_${field.id}`;
+
+      // 3. The Dropdown
+      const resultsDiv = document.createElement("div");
+      resultsDiv.className = "search-results-container";
+      resultsDiv.style.display = "none";
+
+      // FIX 1: Change absolute to relative so it naturally expands the modal!
+      resultsDiv.style.position = "relative";
+      resultsDiv.style.width = "100%";
+      resultsDiv.style.marginTop = "4px";
+      resultsDiv.style.maxHeight = "180px";
+      resultsDiv.style.overflowY = "auto";
+      // Remove zIndex and top since it's no longer floating absolutely
+      resultsDiv.style.backgroundColor = "var(--surface-color)";
+      resultsDiv.style.border = "1px solid var(--border-color)";
+      resultsDiv.style.borderRadius = "4px";
+
+      wrapper.appendChild(input);
+      wrapper.appendChild(hiddenInput);
+      wrapper.appendChild(resultsDiv);
+      group.appendChild(wrapper);
+
+      // Fetch the Programs JSON
+      fetch("/static/json/programs.json")
+        .then((response) => response.json())
+        .then((programsData) => {
+          let programsList = [];
+          if (Array.isArray(programsData)) {
+            programsList = programsData.map((p) => ({
+              title: p.Title || p.title || p.name || "Unknown Program",
+              url: p.url || p.URL || p.link || "",
+            }));
+          } else {
+            programsList = Object.keys(programsData).map((key) => ({
+              title: key,
+              url: programsData[key],
+            }));
+          }
+
+          const fuse = new Fuse(programsList, {
+            keys: ["title"],
+            threshold: 0.3,
+          });
+
+          input.addEventListener("input", (e) => {
+            const query = e.target.value;
+            resultsDiv.innerHTML = "";
+            hiddenInput.value = ""; // Clear hidden url if they type manually
+
+            if (query.length < 2) {
+              resultsDiv.style.display = "none";
+              return;
+            }
+
+            const results = fuse.search(query).slice(0, 8);
+            if (results.length > 0) {
+              resultsDiv.style.display = "block";
+
+              results.forEach((result) => {
+                const item = result.item;
+                const div = document.createElement("div");
+                div.style.padding = "10px";
+                div.style.borderBottom = "1px solid var(--border-color)";
+                div.style.cursor = "pointer";
+                div.innerHTML = `<strong>${item.title}</strong>`;
+
+                div.addEventListener(
+                  "mouseenter",
+                  () => (div.style.backgroundColor = "#f5f5f5"),
+                );
+                div.addEventListener(
+                  "mouseleave",
+                  () => (div.style.backgroundColor = "transparent"),
+                );
+
+                div.addEventListener("click", () => {
+                  input.value = item.title;
+                  hiddenInput.value = item.url; // The URL will definitely exist now!
+                  resultsDiv.style.display = "none";
+                });
+
+                resultsDiv.appendChild(div);
+              });
+            } else {
+              resultsDiv.style.display = "none";
+            }
+          });
+
+          document.addEventListener("click", (evt) => {
+            if (!wrapper.contains(evt.target))
+              resultsDiv.style.display = "none";
+          });
+        })
+        .catch((err) => console.error("Could not load programs JSON:", err));
+    } else if (field.type === "course_search") {
+      // --- THE NEW AUTO-COMPLETE SEARCH FIELD ---
+      const wrapper = document.createElement("div");
+      wrapper.style.position = "relative";
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.id = `prompt_field_${field.id}`;
+      input.value = field.defaultValue || "";
+      input.placeholder = "e.g., COMP 250 (Type to search...)";
+      input.style.width = "100%";
+      input.style.padding = "10px";
+      input.style.border = "1px solid var(--border-color)";
+      input.style.borderRadius = "4px";
+      input.style.boxSizing = "border-box";
+
+      const resultsDiv = document.createElement("div");
+      resultsDiv.className = "search-results-container";
+      resultsDiv.style.display = "none";
+      resultsDiv.style.position = "relative";
+      resultsDiv.style.left = "0";
+      resultsDiv.style.width = "100%";
+      resultsDiv.style.maxHeight = "200px";
+      resultsDiv.style.overflowY = "auto";
+      resultsDiv.style.zIndex = "1000";
+      resultsDiv.style.backgroundColor = "var(--surface-color)";
+      resultsDiv.style.border = "1px solid var(--border-color)";
+      resultsDiv.style.boxShadow = "0 4px 12px rgba(0,0,0,0.1)";
+
+      wrapper.appendChild(input);
+      wrapper.appendChild(resultsDiv);
+      group.appendChild(wrapper);
+
+      // Fetch the JSON and setup Fuse.js
+      fetch("/static/json/courses_info.json")
+        .then((response) => response.json())
+        .then((coursesJson) => {
+          const coursesList = Object.keys(coursesJson).map((code) => ({
+            code: code,
+            ...coursesJson[code],
+          }));
+
+          const fuse = new Fuse(coursesList, {
+            keys: ["code", "Title"],
+            threshold: 0.3,
+          });
+
+          input.addEventListener("input", (e) => {
+            const query = e.target.value;
+            resultsDiv.innerHTML = "";
+
+            if (query.length < 2) {
+              resultsDiv.style.display = "none";
+              return;
+            }
+
+            const results = fuse.search(query).slice(0, 5);
+            if (results.length > 0) {
+              resultsDiv.style.display = "block";
+
+              results.forEach((result) => {
+                const item = result.item;
+                const div = document.createElement("div");
+                div.style.padding = "10px";
+                div.style.borderBottom = "1px solid var(--border-color)";
+                div.style.cursor = "pointer";
+                div.innerHTML = `<strong>${item.code}</strong> - ${item.Title}`;
+
+                div.addEventListener(
+                  "mouseenter",
+                  () => (div.style.backgroundColor = "#f5f5f5"),
+                );
+                div.addEventListener(
+                  "mouseleave",
+                  () => (div.style.backgroundColor = "transparent"),
+                );
+
+                div.addEventListener("click", () => {
+                  input.value = item.code;
+                  resultsDiv.style.display = "none";
+
+                  const titleInput =
+                    document.getElementById("prompt_field_title");
+                  if (titleInput) titleInput.value = item.Title;
+
+                  const creditsInput = document.getElementById(
+                    "prompt_field_credits",
+                  );
+                  if (creditsInput) creditsInput.value = item.Credits;
+                });
+
+                resultsDiv.appendChild(div);
+              });
+            } else {
+              resultsDiv.style.display = "none";
+            }
+          });
+
+          document.addEventListener("click", (evt) => {
+            if (!wrapper.contains(evt.target))
+              resultsDiv.style.display = "none";
+          });
+        })
+        .catch((err) => console.error("Could not load courses JSON:", err));
     } else {
       const input = document.createElement("input");
       input.type = field.type || "text";
@@ -401,19 +618,27 @@ export function openCustomPrompt({ title, submitText, fields, onSubmit }) {
   function cleanup() {
     modal.style.display = "none";
     form.onsubmit = null;
-    cancelBtn.onclick = null;
     closeBtn.onclick = null;
   }
 
   form.onsubmit = (e) => {
     e.preventDefault();
     const results = {};
+
     fields.forEach((field) => {
       const el = document.getElementById(`prompt_field_${field.id}`);
+
       if (field.type === "semester_builder") {
         results[field.id] = el.getValue();
       } else {
         results[field.id] = el.value;
+
+        const displayEl = document.getElementById(
+          `prompt_field_${field.id}_display`,
+        );
+        if (displayEl) {
+          results[`${field.id}_display`] = displayEl.value;
+        }
       }
     });
 
@@ -424,6 +649,5 @@ export function openCustomPrompt({ title, submitText, fields, onSubmit }) {
     }
   };
 
-  cancelBtn.onclick = cleanup;
   closeBtn.onclick = cleanup;
 }

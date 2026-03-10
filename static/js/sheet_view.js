@@ -9,7 +9,7 @@ export function updateSheetView(detailsData) {
 
   Object.values(detailsData).forEach((course) => {
     const credits = parseFloat(course.credits) || 0;
-    const status = course.status || "TO TAKE";
+    const status = course.status || "Unassigned";
     const term = course.planned_semester || "Unassigned";
     let cat = course.category ? course.category.toUpperCase() : "CORE";
     if (cat.includes("COMPL")) cat = "COMPLEMENTARY";
