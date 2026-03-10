@@ -1,9 +1,17 @@
 <!doctype html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{% block title %}DegreeViz{% endblock %}</title>
+    
+    <title>{% block title %}McGill Degree Planner & Course Visualizer | DegreeViz{% endblock %}</title>
+    <meta name="title" content="McGill Degree Planner & Course Visualizer | DegreeViz">
+    <meta name="description" content="The ultimate interactive McGill degree planner. Search your major, visualize prerequisites, map out your courses, and plan your graduation at McGill University effortlessly.">
+    <meta name="keywords" content="mcgill degree planner, mcgill course visualizer, mcgill prerequisites, mcgill university, degreeviz, mcgill schedule maker, mcgill graduation">
+    
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.degreeviz.com/"> <meta property="og:title" content="McGill Degree Planner & Course Visualizer | DegreeViz">
+    <meta property="og:description" content="The ultimate interactive McGill degree planner. Search your major, visualize prerequisites, and map out your courses at McGill University effortlessly.">
     <link
       rel="icon"
       href="{{ url_for('static', filename='favicon.png') }}"
