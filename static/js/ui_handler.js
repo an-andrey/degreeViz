@@ -627,6 +627,7 @@ export function openCustomPrompt({ title, submitText, fields, onSubmit }) {
 
     fields.forEach((field) => {
       const el = document.getElementById(`prompt_field_${field.id}`);
+
       if (field.type === "semester_builder") {
         results[field.id] = el.getValue();
       } else {
