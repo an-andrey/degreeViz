@@ -7,6 +7,10 @@ import {
   setupSaveButtonHandler,
   markGraphDirty,
 } from "./ui_handler.js";
+<<<<<<< HEAD
+=======
+import { setupAddProgramButton } from "./program_handler.js";
+>>>>>>> preprod
 import { setupHistory } from "./history.js";
 import { setupSheetViewListeners, updateSheetView } from "./sheet_view.js";
 import { setupSidebar } from "./sidebar.js";
@@ -90,6 +94,18 @@ document.addEventListener("DOMContentLoaded", function () {
     markGraphDirty,
     performWithoutHistory,
   );
+<<<<<<< HEAD
+=======
+  setupAddProgramButton(
+    network,
+    nodes,
+    edges,
+    detailsData,
+    prereqsData,
+    saveGraphState,
+    markGraphDirty,
+  );
+>>>>>>> preprod
 
   // Core Network Events
   network.on("click", function (params) {
