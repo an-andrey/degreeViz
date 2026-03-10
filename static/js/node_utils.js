@@ -38,11 +38,7 @@ export function generateNodeLabel(
   semesters,
   category,
   plannedSemester = "Unassigned",
-<<<<<<< HEAD
-  status = "TO TAKE",
-=======
   status = "Unassigned",
->>>>>>> preprod
 ) {
   return `<b><code>${code}</code></b>\n${title}\n(${credits} credits)\nStatus: <b>${status}</b>\nTerm Planned: <b>${plannedSemester}</b>\n<b>[${category}]</b>\n`;
 }

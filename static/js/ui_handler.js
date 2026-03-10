@@ -377,8 +377,6 @@ export function openCustomPrompt({ title, submitText, fields, onSubmit }) {
       group.appendChild(builderContainer);
 
       // 3. STANDARD TEXT INPUT
-<<<<<<< HEAD
-=======
     } else if (field.type === "program_search") {
       // --- AUTO-COMPLETE SEARCH FIELD FOR PROGRAMS ---
       const wrapper = document.createElement("div");
@@ -597,7 +595,6 @@ export function openCustomPrompt({ title, submitText, fields, onSubmit }) {
           });
         })
         .catch((err) => console.error("Could not load courses JSON:", err));
->>>>>>> preprod
     } else {
       const input = document.createElement("input");
       input.type = field.type || "text";
@@ -630,16 +627,10 @@ export function openCustomPrompt({ title, submitText, fields, onSubmit }) {
 
     fields.forEach((field) => {
       const el = document.getElementById(`prompt_field_${field.id}`);
-<<<<<<< HEAD
-=======
-
->>>>>>> preprod
       if (field.type === "semester_builder") {
         results[field.id] = el.getValue();
       } else {
         results[field.id] = el.value;
-<<<<<<< HEAD
-=======
 
         const displayEl = document.getElementById(
           `prompt_field_${field.id}_display`,
@@ -647,7 +638,6 @@ export function openCustomPrompt({ title, submitText, fields, onSubmit }) {
         if (displayEl) {
           results[`${field.id}_display`] = displayEl.value;
         }
->>>>>>> preprod
       }
     });
 

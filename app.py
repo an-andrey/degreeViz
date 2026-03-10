@@ -234,11 +234,7 @@ def modify_nodes():
                 "credits": credits,
                 "category": category,
                 "semesters_offered": semesters_offered,
-<<<<<<< HEAD
-                "status": "TO TAKE",
-=======
                 "status": "Unassigned",
->>>>>>> preprod
                 "planned_semester": "Unassigned",
             }
             prereqs[node_id] = []
