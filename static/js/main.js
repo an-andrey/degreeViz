@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return;
   }
 
-  const nodes = initializeNodes(detailsData);
+  const nodes = initializeNodes(detailsData, prereqsData);
   const edges = initializeEdges(prereqsData, nodes);
   const container = document.getElementById("courseNetwork");
   const options = getVisNetworkOptions(nodes, edges);
