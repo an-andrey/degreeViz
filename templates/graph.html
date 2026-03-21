@@ -9,10 +9,13 @@
 <div class="global-header-container">
     <div class="tabs-header">
       <button class="tab-btn active" onclick="switchTab('graph')">
-        Visual Graph
+        Graph Planner
       </button>
       <button class="tab-btn" onclick="switchTab('sheet')">
-        Sheet View
+        Credit Tracker
+      </button>
+      <button class="tab-btn" onclick="switchTab('gpa')">
+        GPA Tracker
       </button>
     </div>
     
@@ -69,13 +72,29 @@
             <option value="ELECTIVE">Elective</option>
           </select>
           
-          <label>Status</label>
+<label>Status</label>
           <select id="inspectorStatus">
             <option value="Unassigned">Unassigned</option>
             <option value="TO TAKE">TO TAKE</option>
             <option value="TAKING">TAKING</option>
             <option value="DONE">DONE</option>
           </select>
+
+          <div id="inspectorGradeContainer" style="display: none; margin-top: 10px;">
+            <label>Grade Earned</label>
+            <select id="inspectorGrade">
+              <option value="">Select Grade</option>
+              <option value="4.0">A (4.0)</option>
+              <option value="3.7">A- (3.7)</option>
+              <option value="3.3">B+ (3.3)</option>
+              <option value="3.0">B (3.0)</option>
+              <option value="2.7">B- (2.7)</option>
+              <option value="2.3">C+ (2.3)</option>
+              <option value="2.0">C (2.0)</option>
+              <option value="1.0">D (1.0)</option>
+              <option value="0.0">F (0.0)</option>
+            </select>
+          </div>
 
 
           <label>Planned Term</label>
@@ -93,9 +112,16 @@
     </div>
 
     <div id="sheet-content" class="tab-content">
-      <div class="sheet-header">
-        <h3>Degree Progress & Semester Plan (DONE or TAKING courses)</h3>
+      <div class="sheet-header" style="margin-bottom: 10px; border-bottom: none; padding-bottom: 0;">
+        <h3>Degree Progress & Semester Plan</h3>
+
+      <div class="power-user-hint">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+        <span><strong>Hint:</strong> Set courses to <kbd>DONE</kbd> or <kbd>TAKING</kbd> in the Graph Planner sidebar and assign a <kbd>Planned Term</kbd> to see them here.</span>
       </div>
+    </div>
+
+
 
       <div class="sheet-tables-container">
         <div class="table-card">
@@ -189,6 +215,16 @@
           </table>
         </div>
       </div>
+    </div>
+
+    <div id="gpa-content" class="tab-content">
+      <div class="sheet-header">
+        <h3>Unofficial Transcript & GPA</h3>
+        <h2 id="cumulativeGpaDisplay" class="cgpa-display">GPA: 0.00</h2>
+      </div>
+
+      <div id="transcriptContainer" class="sheet-tables-container" style="flex-direction: column;">
+        </div>
     </div>
   </div>
 </div>

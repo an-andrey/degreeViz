@@ -27,16 +27,8 @@ export function getVisNetworkOptions(nodes, edges) {
     },
     layout: {
       hierarchical: {
-        enabled: true,
-        direction: "LR",
-        sortMethod: "directed",
-        levelSeparation: 280,
-        nodeSpacing: 140,
-        treeSpacing: 220,
-        blockShifting: true,
-        edgeMinimization: true,
-        parentCentralization: true,
-        shakeTowards: "roots",
+        //custom topo sort algo
+        enabled: false,
       },
     },
     physics: { enabled: false },

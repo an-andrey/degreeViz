@@ -12,6 +12,7 @@ import { setupHistory } from "./history.js";
 import { setupSheetViewListeners, updateSheetView } from "./sheet_view.js";
 import { setupSidebar } from "./sidebar.js";
 import { generateNodeLabel, getStatusColor } from "./node_utils.js";
+import { updateGpaTracker } from "./gpa_tracker.js";
 
 document.addEventListener("DOMContentLoaded", function () {
   if (
@@ -22,7 +23,7 @@ document.addEventListener("DOMContentLoaded", function () {
     return;
   }
 
-  const nodes = initializeNodes(detailsData);
+  const nodes = initializeNodes(detailsData, prereqsData);
   const edges = initializeEdges(prereqsData, nodes);
   const container = document.getElementById("courseNetwork");
   const options = getVisNetworkOptions(nodes, edges);
@@ -125,5 +126,8 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // Initial Data Sync
-  setTimeout(() => updateSheetView(detailsData), 500);
+  setTimeout(() => {
+    updateSheetView(detailsData);
+    updateGpaTracker(detailsData);
+  }, 500);
 });
