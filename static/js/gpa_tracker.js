@@ -21,7 +21,7 @@ export function updateGpaTracker(detailsData) {
 
       if (!semesters[term]) semesters[term] = [];
 
-      course.code = courseCode;
+      course.code = course.code || courseCode;
       semesters[term].push(course);
     }
   });
