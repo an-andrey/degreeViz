@@ -1,5 +1,6 @@
 import { generateNodeLabel, getStatusColor } from "./node_utils.js";
 import { updateSheetView } from "./sheet_view.js";
+import { updateGpaTracker } from "./gpa_tracker.js";
 
 export function setupSidebar(
   network,
@@ -52,7 +53,7 @@ export function setupSidebar(
 
     if (nodeData) {
       document.getElementById("inspectorCode").textContent =
-        nodeData.code || "Unknown Code";
+        nodeId || "Unknown Code";
       document.getElementById("inspectorTitle").textContent =
         nodeData.title || "Unknown Title";
       document.getElementById("inspectorCredits").textContent =
@@ -66,6 +67,16 @@ export function setupSidebar(
         nodeData.semesters_offered || "Unknown";
       document.getElementById("inspectorStatus").value =
         nodeData.status || "Unassigned";
+
+      const gradeContainer = document.getElementById("inspectorGradeContainer");
+      const gradeSelect = document.getElementById("inspectorGrade");
+      if (nodeData.status === "DONE") {
+        gradeContainer.style.display = "block";
+        gradeSelect.value = nodeData.grade || "";
+      } else {
+        gradeContainer.style.display = "none";
+        gradeSelect.value = "";
+      }
 
       const planned = nodeData.planned_semester || "Unassigned";
       if (planned === "Unassigned") {
@@ -93,6 +104,7 @@ export function setupSidebar(
   function triggerDataSync() {
     markGraphDirty();
     updateSheetView(detailsData);
+    updateGpaTracker(detailsData);
   }
 
   // Handle Status Change -> Updates Color
@@ -103,7 +115,17 @@ export function setupSidebar(
         const nData = detailsData[currentlySelectedNodeId];
         nData.status = e.target.value;
 
-        // Instantly update the color on the canvas!
+        const gradeContainer = document.getElementById(
+          "inspectorGradeContainer",
+        );
+        if (nData.status === "DONE") {
+          gradeContainer.style.display = "block";
+        } else {
+          gradeContainer.style.display = "none";
+          nData.grade = null; // Wipe out the grade if they un-mark it as DONE
+          document.getElementById("inspectorGrade").value = "";
+        }
+
         performWithoutHistory(() => {
           nodes.update({
             id: currentlySelectedNodeId,
@@ -168,13 +190,14 @@ export function setupSidebar(
         const nData = detailsData[currentlySelectedNodeId];
         nData.category = e.target.value;
 
-        // Uses the centralized label generator!
+        // Uses the centralized label generator
         const newLabel = generateNodeLabel(
           nData.code || "Unknown Code",
           nData.title,
           nData.credits,
           nData.semesters_offered,
           nData.category,
+          nData.planned_semester,
           nData.status,
         );
 
@@ -182,6 +205,17 @@ export function setupSidebar(
           nodes.update({ id: currentlySelectedNodeId, label: newLabel });
         });
         triggerDataSync();
+      }
+    });
+  }
+
+  const inspectorGrade = document.getElementById("inspectorGrade");
+  if (inspectorGrade) {
+    inspectorGrade.addEventListener("change", function (e) {
+      if (currentlySelectedNodeId && detailsData[currentlySelectedNodeId]) {
+        detailsData[currentlySelectedNodeId].grade = e.target.value;
+        markGraphDirty();
+        updateGpaTracker(detailsData); // Updates the transcript instantly
       }
     });
   }

@@ -12,6 +12,7 @@ import { setupHistory } from "./history.js";
 import { setupSheetViewListeners, updateSheetView } from "./sheet_view.js";
 import { setupSidebar } from "./sidebar.js";
 import { generateNodeLabel, getStatusColor } from "./node_utils.js";
+import { updateGpaTracker } from "./gpa_tracker.js";
 
 document.addEventListener("DOMContentLoaded", function () {
   if (
@@ -125,5 +126,8 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   // Initial Data Sync
-  setTimeout(() => updateSheetView(detailsData), 500);
+  setTimeout(() => {
+    updateSheetView(detailsData);
+    updateGpaTracker(detailsData);
+  }, 500);
 });
