@@ -30,15 +30,16 @@ elif APP_ENV == "local":
 
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 SUPABASE_URL = os.environ.get("SUPABASE_URL") 
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
-Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
 #Injects Supabase credentials into all Jinja templates automatically
 @app.context_processor
 def inject_supabase_config():
     return dict(
         supabase_url=SUPABASE_URL,
-        supabase_key=SUPABASE_KEY
+        supabase_key=SUPABASE_KEY # important to pass the key and not service_role_key
     )
 
 courses_info = {}
