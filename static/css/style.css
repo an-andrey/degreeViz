@@ -353,12 +353,15 @@ button:disabled {
   border-left: 1px solid var(--border-color);
   border-radius: 0;
   box-shadow: -4px 0 15px rgba(0, 0, 0, 0.05);
-  padding: 20px;
+  padding: 20px 20px 50px 20px;
   transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 10;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+
+  max-height: 85vh; /* Prevents it from growing taller than the screen */
+  overflow-y: auto; /* Adds a scrollbar ONLY if the content overflows */
 }
 
 .node-inspector.open {
@@ -519,6 +522,7 @@ select.badge-select:focus {
   }
   .custom-manipulation-buttons {
     flex-direction: column;
+    flex-wrap: wrap;
   }
 }
 
@@ -1401,13 +1405,15 @@ select.badge-select:focus {
 .power-user-hint {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px; /* Slightly wider gap for readability */
   color: var(--text-muted);
   font-size: 0.85em;
-  background-color: var(--bg-color); /* Slight background to separate it */
-  padding: 6px 12px;
-  border-radius: 20px;
+  background-color: var(--bg-color);
+  padding: 8px 16px;
+  border-radius: 6px; /* Changed from 20px to a modern rounded square to match your cards */
   border: 1px dashed var(--border-color);
+  flex: 0 1 auto; /* Stops it from aggressively stretching */
+  width: fit-content; /* Hugs the text perfectly */
 }
 
 .power-user-hint svg {
@@ -1427,4 +1433,118 @@ select.badge-select:focus {
   font-size: 0.9em;
   font-weight: 600;
   padding: 2px 6px;
+}
+
+/* --- GPA Tracker Styles --- */
+.cgpa-display {
+  color: var(--mcgill-red);
+  margin: 0;
+  font-size: 1.8em;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+
+.transcript-empty-state {
+  color: var(--text-muted);
+  padding: 50px 20px;
+  text-align: center;
+  background-color: var(--surface-color);
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  margin-top: 20px;
+  font-size: 1.05em;
+}
+
+.transcript-card {
+  width: 100%; /* Forces the transcript card to span full width */
+  margin-bottom: 25px;
+}
+
+.term-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 15px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 12px;
+}
+
+.term-header h4 {
+  margin: 0 !important; /* Overrides the standard table-card margins */
+  font-size: 1.3em !important;
+  color: var(--text-main);
+  text-align: left !important;
+}
+
+.term-gpa {
+  font-weight: 600;
+  font-size: 0.95em;
+  color: var(--text-muted);
+}
+
+.term-gpa span {
+  color: var(--text-main);
+  font-size: 1.1em;
+  margin-left: 6px;
+}
+
+.transcript-table th:nth-child(2),
+.transcript-table td:nth-child(2) {
+  width: 50%; /* Gives the Course Title column more breathing room */
+  text-align: left; /* Aligns title to the left for readability */
+}
+
+.muted-text {
+  color: var(--text-muted) !important;
+}
+
+button#scrapeButton {
+  background-color: var(--mcgill-red);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Make it look properly grayed out when disabled */
+button#scrapeButton:disabled {
+  background-color: var(--border-color);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.btn-loading {
+  position: relative !important;
+  pointer-events: none !important; /* Physically blocks double-clicking */
+  background-color: var(
+    --mcgill-red-hover
+  ) !important; /* Darkens to show it was clicked */
+  color: transparent !important; /* Hides the text so the spinner shows clearly */
+  transition: all 0.2s ease;
+}
+
+.btn-loading::after {
+  content: "";
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  top: 50%;
+  left: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: button-spin 0.8s linear infinite;
+}
+
+@keyframes button-spin {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
 }

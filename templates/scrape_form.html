@@ -34,14 +34,16 @@
       <input type="hidden" id="url" name="url" required />
 
       <div class="card-action">
-        <input
+        <button
           type="submit"
           id="scrapeButton"
           name="action"
           value="Visualize Program"
           disabled
           style="width: 100%; margin: 0"
-        />
+        >
+          Visualize Program
+        </button>
       </div>
     </form>
   </div>
@@ -77,4 +79,18 @@
 {% endif %} {% endblock %}{% block scripts %}
 <!-- the Fuzzy search bar script -->
 <script src="{{ url_for('static', filename='js/search_form.js') }}"></script>
+<!-- add loading circle to button -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const scrapeForm = document.getElementById("scrapeForm");
+    const scrapeButton = document.getElementById("scrapeButton");
+
+    if (scrapeForm && scrapeButton) {
+      scrapeForm.addEventListener("submit", function () {
+        // Instantly disable the button and show the spinner
+        scrapeButton.classList.add("btn-loading");
+      });
+    }
+  });
+</script>
 {% endblock %}
