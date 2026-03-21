@@ -21,7 +21,7 @@ export function updateGpaTracker(detailsData) {
 
       if (!semesters[term]) semesters[term] = [];
 
-      course.code = courseCode;
+      course.code = course.code || courseCode;
       semesters[term].push(course);
     }
   });
@@ -52,15 +52,15 @@ export function updateGpaTracker(detailsData) {
   }
 
   const gradeMap = {
-    4.0: "A",
+    "4.0": "A",
     3.7: "A-",
     3.3: "B+",
-    3.0: "B",
+    "3.0": "B",
     2.7: "B-",
     2.3: "C+",
-    2.0: "C",
-    1.0: "D",
-    0.0: "F",
+    "2.0": "C",
+    "1.0": "D",
+    "0.0": "F",
   };
 
   sortedTerms.forEach((term) => {
@@ -132,5 +132,5 @@ export function updateGpaTracker(detailsData) {
     totalGradedCredits > 0
       ? (totalGradePoints / totalGradedCredits).toFixed(2)
       : "0.00";
-  cgpaDisplay.textContent = `CGPA: ${cgpa}`;
+  cgpaDisplay.textContent = `GPA: ${cgpa}`;
 }
