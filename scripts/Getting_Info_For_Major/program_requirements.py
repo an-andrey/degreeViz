@@ -108,7 +108,7 @@ def extract_program_requirements(soup):
                     continue
                 match = COURSE_CODE_RE.search(_clean_text(code_cell.get_text(" ", strip=True)))
                 if match:
-                    bucket.courses.append(match.group(0).replace(" ", ""))
+                    bucket.courses.append(match.group(0))
 
             if bucket.courses:
                 bucket.courses = list(dict.fromkeys(bucket.courses))

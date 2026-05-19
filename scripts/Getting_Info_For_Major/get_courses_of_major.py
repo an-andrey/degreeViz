@@ -24,7 +24,7 @@ def get_program_codes(url, soup=None):
 
     # On McGill pages, program course rows use <td class="codecol">COMP 250</td>.
     course_codes = soup.find_all("td", class_="codecol")
-    return [code.get_text(strip=True).replace(" ", "") for code in course_codes]
+    return [code.get_text(strip=True) for code in course_codes]
 
 
 def get_course_metadata_from_program_page(code, soup):
@@ -33,39 +33,53 @@ def get_course_metadata_from_program_page(code, soup):
     This is only a fallback for courses missing from static/json/courses_info.json.
     It does NOT replace the Gemini prerequisite pipeline.
     """
-    normalized_code = code.replace(" ", "")
-    code_cell = soup.find("td", class_="codecol", string=lambda txt: txt and normalized_code in txt.replace(" ", ""))
+    # Locate the correct code cell
+    code_cell = soup.find("td", class_="codecol", string=lambda txt: txt and code in txt)
     if not code_cell:
         for candidate in soup.find_all("td", class_="codecol"):
-            text = candidate.get_text(" ", strip=True).replace(" ", "")
-            if text == normalized_code:
+            if candidate.get_text(strip=True) == code:
                 code_cell = candidate
                 break
 
     if not code_cell:
         return None
 
+    # Get the parent row of the code cell
     row = code_cell.find_parent("tr")
     if not row:
         return None
 
-    row_text = row.get_text(" ", strip=True)
     title = ""
-    title_cell = row.find("td", class_=lambda cls: cls and ("titlecol" in cls or "courseblocktitle" in cls))
-    if title_cell:
-        title = title_cell.get_text(" ", strip=True)
-    else:
-        code_match = COURSE_CODE_RE.search(row_text)
-        if code_match:
-            title = row_text[code_match.end():].strip(" -:")
-
     credits = "N/A"
-    credit_match = re.search(r"(\d+(?:\.\d+)?)\s*credits?", row_text, re.IGNORECASE)
-    if credit_match:
-        credits = credit_match.group(1)
+    semesters_offered = "Unknown"
+
+    # Extract Title
+    title_cell = code_cell.find_next_sibling("td")
+    if title_cell:
+        title = title_cell.get_text(strip=True).rstrip(".")
+
+    # Extract Credits
+    if title_cell:
+        hours_cell = title_cell.find_next_sibling("td")
+        if hours_cell:
+            hours_text = hours_cell.get_text(strip=True)
+            credit_match = re.search(r"(\d+(?:\.\d+)?)", hours_text)
+            if credit_match:
+                credits = credit_match.group(1)
+
+    # Extract Semesters Offered from the adjacent bubbledrawer row
+    # find_next_sibling find the next <tr> tag directly below the current course row
+    drawer_row = row.find_next_sibling("tr", class_="bubbledrawer")
+    if drawer_row:
+        terms_paragraph = drawer_row.find("p", class_="bubbledrawer__terms")
+        if terms_paragraph:
+            # Extract text and strip out the "Terms offered:" prefix label
+            raw_terms = terms_paragraph.get_text(" ", strip=True)
+            semesters_offered = raw_terms.replace("Terms offered:", "").strip().strip('"')
 
     return {
-        "title": title or f"{normalized_code} (Details not found)",
+        "code": code,
+        "title": title or f"{code} (Details not found)",
         "credits": credits,
-        "semesters_offered": "Unknown",
+        "semesters_offered": semesters_offered,
     }
