@@ -90,8 +90,8 @@ export function setupAddProgramButton(
               let currentY = startY;
 
               Object.keys(result.new_details).forEach((code, index) => {
-                if (!nodes.get(code)) {
-                  const d = result.new_details[code];
+                const d = result.new_details[code];
+                if (!nodes.get(code) && (d.include_in_graph !== false)) {
                   const xOffset = currentX + Math.floor(index / 5) * 200;
                   const yOffset = currentY + (index % 5) * 150;
 

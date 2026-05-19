@@ -72,6 +72,7 @@ def process_program_data(program_url, major):
                 "requirement_bucket_title": bucket.get("title") if bucket else None,
                 "requirement_min_credits": bucket.get("min_credits") if bucket else 0,
                 "requirement_max_credits": bucket.get("max_credits") if bucket else None,
+                "include_in_graph": (bucket.get("category", "CORE") == "CORE") if bucket else True,
                 "color": utils.parse_semester_to_color(actual_details.get("semesters_offered", ""))
             }
 
