@@ -13,6 +13,7 @@ import { setupSheetViewListeners, updateSheetView } from "./sheet_view.js";
 import { setupSidebar } from "./sidebar.js";
 import { generateNodeLabel, getStatusColor } from "./node_utils.js";
 import { updateGpaTracker } from "./gpa_tracker.js";
+import { setupOptionalCoursesShelf } from "./optional_courses.js";
 
 document.addEventListener("DOMContentLoaded", function () {
   if (
@@ -101,6 +102,7 @@ document.addEventListener("DOMContentLoaded", function () {
     saveGraphState,
     markGraphDirty,
   );
+  setupOptionalCoursesShelf(network, nodes, edges, detailsData, prereqsData, markGraphDirty);
 
   // Core Network Events
   network.on("click", function (params) {

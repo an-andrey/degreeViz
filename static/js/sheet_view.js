@@ -1,4 +1,4 @@
-export function updateSheetView(detailsData) {
+export function updateSheetView(detailsData, requirementsData = window.programRequirements || {}) {
   let stats = {
     CORE: { taken: 0 },
     COMPLEMENTARY: { taken: 0 },
@@ -63,6 +63,60 @@ export function updateSheetView(detailsData) {
     const load = semesterLoads[term];
     const row = document.createElement("tr");
     row.innerHTML = `<td><strong>${term}</strong></td><td style="${load >= 18 ? "color: var(--error-text); font-weight: bold;" : ""}">${load}</td>`;
+    tbody.appendChild(row);
+  });
+
+  updateRequirementBuckets(detailsData, requirementsData);
+}
+
+function formatCreditRange(bucket) {
+  const minCredits = Number(bucket.min_credits) || 0;
+  const maxCredits = Number(bucket.max_credits);
+
+  if (Number.isFinite(maxCredits) && maxCredits !== minCredits) {
+    return `${minCredits}-${maxCredits}`;
+  }
+
+  return `${minCredits}`;
+}
+
+function updateRequirementBuckets(detailsData, requirementsData) {
+  const card = document.getElementById("requirementBucketsCard");
+  const tbody = document.getElementById("requirementBucketTableBody");
+  if (!card || !tbody) return;
+
+  const buckets = Array.isArray(requirementsData?.buckets)
+    ? requirementsData.buckets
+    : [];
+
+  if (buckets.length === 0) {
+    card.style.display = "none";
+    tbody.innerHTML = "";
+    return;
+  }
+
+  card.style.display = "block";
+  tbody.innerHTML = "";
+
+  buckets.forEach((bucket) => {
+    const taken = Object.entries(detailsData).reduce((sum, [code, course]) => {
+      const belongsToBucket =
+        course.requirement_bucket === bucket.id || bucket.courses?.includes(code);
+      const countsTowardProgress = ["DONE", "TAKING"].includes(course.status);
+      return belongsToBucket && countsTowardProgress
+        ? sum + (parseFloat(course.credits) || 0)
+        : sum;
+    }, 0);
+
+    const minCredits = Number(bucket.min_credits) || 0;
+    const remaining = Math.max(0, minCredits - taken);
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td><strong>${bucket.title || bucket.id}</strong><br><small>${bucket.category || "CORE"}</small></td>
+      <td>${formatCreditRange(bucket)}</td>
+      <td>${taken}</td>
+      <td class="${remaining > 0 ? "bold-red" : ""}">${remaining}</td>
+    `;
     tbody.appendChild(row);
   });
 }

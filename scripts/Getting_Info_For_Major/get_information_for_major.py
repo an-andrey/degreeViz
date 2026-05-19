@@ -1,4 +1,4 @@
-from scripts.Getting_Info_For_Major import get_courses_of_major, get_prereqs
+from scripts.Getting_Info_For_Major import get_courses_of_major, get_prereqs, program_requirements
 from scripts import utils
 import json
 
@@ -15,10 +15,12 @@ with open('static/json/honours_matches.json', 'r', encoding='utf-8') as f:
 
 def process_program_data(program_url, major):
     try:
-        course_codes = get_courses_of_major.get_program_codes(program_url)
+        program_soup = get_courses_of_major.get_program_soup(program_url)
+        course_codes = get_courses_of_major.get_program_codes(program_url, soup=program_soup)
+        requirements_data = program_requirements.extract_program_requirements(program_soup)
         if not course_codes:
             print(f"No course codes found for URL: {program_url}")
-            return None, None
+            return None, None, None
 
         course_details_data = {}
         gemini_data = {}
@@ -37,8 +39,8 @@ def process_program_data(program_url, major):
                 }
             else:
                 print(f"Warning: Course code {code} from program {major} not found in global courses_info.json")
-                # Add a placeholder if not found in global courses_info
-                course_details_data[code] = {
+                fallback_metadata = get_courses_of_major.get_course_metadata_from_program_page(code, program_soup)
+                course_details_data[code] = fallback_metadata or {
                     "title": f"{code} (Details not found)",
                     "credits": "N/A",
                     "semesters_offered": "Unknown",
@@ -58,8 +60,19 @@ def process_program_data(program_url, major):
         for code, details in course_details_data.items():
             default_detail = {"title": "Unknown Title", "credits": "N/A", "semesters_offered": "Unknown"}
             actual_details = {**default_detail, **details}
+            bucket_id = requirements_data.get("course_to_bucket", {}).get(code)
+            bucket = next(
+                (bucket for bucket in requirements_data.get("buckets", []) if bucket.get("id") == bucket_id),
+                None,
+            )
             course_details_full[code] = {
                 **actual_details,
+                "category": "CORE" if (bucket and bucket.get("category") == "CORE") else "COMPLEMENTARY",
+                "requirement_bucket": bucket_id,
+                "requirement_bucket_title": bucket.get("title") if bucket else None,
+                "requirement_min_credits": bucket.get("min_credits") if bucket else 0,
+                "requirement_max_credits": bucket.get("max_credits") if bucket else None,
+                "include_in_graph": (bucket.get("category", "CORE") == "CORE") if bucket else True,
                 "color": utils.parse_semester_to_color(actual_details.get("semesters_offered", ""))
             }
 
@@ -99,7 +112,7 @@ def process_program_data(program_url, major):
                         course_details_full[prereq_code] = {"title": "Details Not Found (Prereq)", "credits": "N/A", "semesters_offered": "Unknown", "color": "LightSteelBlue"}
 
 
-        return courses_prereqs_data, course_details_full
+        return courses_prereqs_data, course_details_full, requirements_data
     except Exception as e:
         print(f"Error in process_program_data for {program_url}: {e}")
-        return None, None
+        return None, None, None
