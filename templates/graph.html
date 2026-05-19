@@ -48,6 +48,14 @@
       </div>
       <div id="courseNetwork"></div>
 
+      <div class="custom-manipulation-buttons">
+                <div id="optionalCourseShelf" class="optional-shelf">
+          <h4 class="optional-shelf-title">Optional Course Pool</h4>
+                    <div id="optionalBucketList" class="optional-course-list"></div>
+        </div>
+      </div>
+
+
       <div id="nodeInspector" class="node-inspector">
         <div class="inspector-header">
           <h4 id="inspectorCode">COMP 250</h4>
@@ -202,6 +210,21 @@
           </table>
         </div>
 
+        <div class="table-card" id="requirementBucketsCard" style="display: none;">
+          <h4>Requirement Buckets</h4>
+          <table class="styled-table">
+            <thead>
+              <tr>
+                <th>Bucket</th>
+                <th>Required</th>
+                <th>Taken/Taking</th>
+                <th>Remaining</th>
+              </tr>
+            </thead>
+            <tbody id="requirementBucketTableBody"></tbody>
+          </table>
+        </div>
+
         <div class="table-card">
           <h4>Per Semester Load</h4>
           <table class="styled-table">
@@ -238,6 +261,8 @@
 <script type="text/javascript">
   const prereqsData = {{ prereqs|tojson }};
   const detailsData = {{ details|tojson }};
+  const programRequirements = {{ requirements|default({})|tojson }};
+  window.programRequirements = programRequirements;
   const serverScheduleId = {{ session.get('schedule_id') | tojson | safe }};
 
   // 1. PULL the requirements from the Flask session (defaults to 0 if brand new)
