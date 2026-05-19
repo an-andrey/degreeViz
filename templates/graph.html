@@ -48,6 +48,16 @@
       </div>
       <div id="courseNetwork"></div>
 
+      <div class="custom-manipulation-buttons">
+        <button id="hideSelectedOptionalBtn" type="button">Hide Selected Optional</button>
+        <div id="optionalCourseShelf" class="optional-shelf">
+          <h4 style="margin:0 0 6px 0;">Optional Course Pool</h4>
+          <div id="optionalCount" class="optional-count">0 optional courses hidden</div>
+          <div id="optionalCourseList" class="optional-course-list"></div>
+        </div>
+      </div>
+
+
       <div id="nodeInspector" class="node-inspector">
         <div class="inspector-header">
           <h4 id="inspectorCode">COMP 250</h4>
@@ -202,6 +212,21 @@
           </table>
         </div>
 
+        <div class="table-card" id="requirementBucketsCard" style="display: none;">
+          <h4>Requirement Buckets</h4>
+          <table class="styled-table">
+            <thead>
+              <tr>
+                <th>Bucket</th>
+                <th>Required</th>
+                <th>Taken/Taking</th>
+                <th>Remaining</th>
+              </tr>
+            </thead>
+            <tbody id="requirementBucketTableBody"></tbody>
+          </table>
+        </div>
+
         <div class="table-card">
           <h4>Per Semester Load</h4>
           <table class="styled-table">
@@ -238,6 +263,8 @@
 <script type="text/javascript">
   const prereqsData = {{ prereqs|tojson }};
   const detailsData = {{ details|tojson }};
+  const programRequirements = {{ requirements|default({})|tojson }};
+  window.programRequirements = programRequirements;
   const serverScheduleId = {{ session.get('schedule_id') | tojson | safe }};
 
   // 1. PULL the requirements from the Flask session (defaults to 0 if brand new)

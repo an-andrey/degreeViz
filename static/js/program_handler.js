@@ -62,6 +62,13 @@ export function setupAddProgramButton(
               // 2. Update local memory
               Object.assign(detailsData, result.new_details);
               Object.assign(prereqsData, result.new_prereqs);
+              if (result.new_requirements?.buckets) {
+                window.programRequirements = window.programRequirements || { buckets: [] };
+                window.programRequirements.buckets = [
+                  ...(window.programRequirements.buckets || []),
+                  ...result.new_requirements.buckets,
+                ];
+              }
 
               // 3. Grid Placement Algorithm
               let maxX = -Infinity;
