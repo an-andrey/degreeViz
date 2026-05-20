@@ -104,14 +104,23 @@ document.addEventListener("DOMContentLoaded", function () {
   );
   setupOptionalCoursesShelf(network, nodes, edges, detailsData, prereqsData, markGraphDirty);
 
-  const toggleOptionalShelfBtn = document.getElementById("toggleOptionalShelfBtn");
+  const openOptionalShelfBtn = document.getElementById("openOptionalShelfBtn");
   const optionalShelf = document.getElementById("optionalCourseShelf");
   const plannerLayout = document.querySelector(".planner-layout");
-  if (toggleOptionalShelfBtn && optionalShelf) {
-    toggleOptionalShelfBtn.addEventListener("click", () => {
-      const collapsed = optionalShelf.classList.toggle("collapsed");
-      if (plannerLayout) plannerLayout.classList.toggle("shelf-hidden", collapsed);
-      toggleOptionalShelfBtn.textContent = collapsed ? "Show" : "Hide";
+  if (openOptionalShelfBtn && optionalShelf && plannerLayout) {
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "secondary-btn";
+    closeBtn.textContent = "Hide";
+    closeBtn.onclick = () => {
+      plannerLayout.classList.add("shelf-hidden");
+      openOptionalShelfBtn.style.display = "inline-block";
+    };
+    const header = optionalShelf.querySelector(".optional-shelf-header");
+    if (header) header.appendChild(closeBtn);
+
+    openOptionalShelfBtn.addEventListener("click", () => {
+      plannerLayout.classList.remove("shelf-hidden");
+      openOptionalShelfBtn.style.display = "none";
     });
   }
 

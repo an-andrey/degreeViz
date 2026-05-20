@@ -48,6 +48,23 @@ def _category_from_heading(heading: str) -> str:
     return "COMPLEMENTARY"
 
 
+
+
+def _is_required_heading(text: str) -> bool:
+    t = text.lower()
+    return "required" in t
+
+
+def _is_footer_or_site_text(text: str) -> bool:
+    t = text.lower()
+    blockers = ["copyright", "cookie", "privacy", "contact us", "helpful links", "course catalogue"]
+    return any(b in t for b in blockers)
+
+
+def _looks_like_constraint(text: str) -> bool:
+    t = text.lower()
+    return ("credit" in t) and ("selected from" in t or "excluding" in t or "level or above" in t or "must be at the" in t)
+
 def _credit_bounds(text: str) -> tuple[float, float | None]:
     text = _clean_text(text)
     range_match = CREDIT_RANGE_RE.search(text)
@@ -79,10 +96,12 @@ def extract_program_requirements(soup):
 
         if element.name == "p":
             text = _clean_text(element.get_text(" ", strip=True))
-            low = text.lower()
-            if "credit" in low and ("selected from" in low or "choose" in low):
+            if _is_footer_or_site_text(text):
+                continue
+            if "selected from" in text.lower() and "credit" in text.lower():
                 pending_bucket_label = text
-            elif ("selected from" in low or "excluding" in low or "level or above" in low) and "credit" in low:
+                pending_constraint_text = ""
+            elif _looks_like_constraint(text):
                 pending_constraint_text = text
             continue
 
@@ -97,7 +116,7 @@ def extract_program_requirements(soup):
             min_credits, max_credits = _credit_bounds(bucket_label)
             lower_label = bucket_label.lower()
             has_selection = ("selected from" in lower_label) or ("choose" in lower_label) or (max_credits is not None and max_credits > min_credits)
-            bucket_category = "CORE" if (current_section_category == "CORE" and not has_selection and bucket_label == current_section_title) else "COMPLEMENTARY"
+            bucket_category = "CORE" if (_is_required_heading(current_section_title) and not has_selection and bucket_label == current_section_title) else "COMPLEMENTARY"
             bucket = RequirementBucket(
                 id=_slugify(f"{current_section_title}-{bucket_label}", f"bucket-{len(buckets)+1}"),
                 title=bucket_label,
@@ -132,6 +151,21 @@ def extract_program_requirements(soup):
         seen.add(key)
         deduped.append(b)
     buckets=deduped
+
+    # deterministic post-pass: any bucket whose title includes "Required" is CORE.
+    for b in buckets:
+        if _is_required_heading(b.title):
+            b.category = "CORE"
+
+    # fallback: if a heading has no explicit required word, treat max-min-credit bucket as CORE.
+    by_heading = {}
+    for b in buckets:
+        heading = b.id.split("-")[0] if b.id else ""
+        by_heading.setdefault(heading, []).append(b)
+    for _, group in by_heading.items():
+        if not any(g.category == "CORE" for g in group):
+            core_candidate = max(group, key=lambda x: x.min_credits)
+            core_candidate.category = "CORE"
 
     course_to_bucket = {}
     totals = {"core": 0.0, "comp": 0.0, "elec": 0.0}

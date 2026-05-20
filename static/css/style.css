@@ -1756,3 +1756,13 @@ button#scrapeButton:disabled {
 .planner-layout.shelf-hidden .optional-shelf {
   display: none;
 }
+
+.open-shelf-fab {
+  position: absolute;
+  right: 24px;
+  top: 130px;
+  z-index: 30;
+  background: var(--mcgill-red);
+}
+.planner-layout.shelf-hidden .optional-shelf { display: none; }
+.planner-layout.shelf-hidden { grid-template-columns: 1fr; }
