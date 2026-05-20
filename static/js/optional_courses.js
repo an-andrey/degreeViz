@@ -109,8 +109,12 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
       group.open = true;
       group.innerHTML = `<summary>${program}</summary>`;
 
+      const programAdditional = [];
       programBuckets.forEach((bucket) => {
         bucket.additional_courses = bucket.additional_courses || [];
+        bucket.additional_courses.forEach((id) => {
+          if (!programAdditional.includes(id)) programAdditional.push(id);
+        });
 
         const wrapper = document.createElement("details");
         wrapper.className = "optional-bucket";
@@ -156,40 +160,38 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
           wrapper.appendChild(row);
         });
 
-        if ((bucket.additional_courses || []).length) {
-          const extraHeader = document.createElement("div");
-          extraHeader.className = "optional-bucket-meta";
-          extraHeader.textContent = "Additional courses";
-          wrapper.appendChild(extraHeader);
-        }
-
-        (bucket.additional_courses || []).forEach((courseId) => {
-          const c = detailsData[courseId];
-          if (!c) return;
-          const row = document.createElement("div");
-          row.className = "optional-course-row";
-          const isOnGraph = !!c.include_in_graph;
-          row.innerHTML = `<span><strong>${c.code || courseId}</strong> ${c.title} (${c.credits})</span>`;
-          const btn = document.createElement("button");
-          btn.textContent = isOnGraph ? "Remove" : "Add";
-          btn.className = isOnGraph ? "danger-btn" : "secondary-btn";
-          btn.onclick = () => {
-            if (isOnGraph) {
-              c.include_in_graph = false;
-              if (nodes.get(courseId)) nodes.remove(courseId);
-            } else {
-              renderCourse(network, nodes, edges, detailsData, prereqsData, courseId);
-            }
-            markGraphDirty();
-            updateSheetView(detailsData, requirements);
-            render();
-          };
-          row.appendChild(btn);
-          wrapper.appendChild(row);
-        });
-
         group.appendChild(wrapper);
       });
+
+      const extraBucket = document.createElement("details");
+      extraBucket.className = "optional-bucket";
+      extraBucket.open = true;
+      extraBucket.innerHTML = `<summary>Additional User Courses</summary>`;
+      programAdditional.forEach((courseId) => {
+        const c = detailsData[courseId];
+        if (!c) return;
+        const row = document.createElement("div");
+        row.className = "optional-course-row";
+        const isOnGraph = !!c.include_in_graph;
+        row.innerHTML = `<span><strong>${c.code || courseId}</strong> ${c.title} (${c.credits})</span>`;
+        const btn = document.createElement("button");
+        btn.textContent = isOnGraph ? "Remove" : "Add";
+        btn.className = isOnGraph ? "danger-btn" : "secondary-btn";
+        btn.onclick = () => {
+          if (isOnGraph) {
+            c.include_in_graph = false;
+            if (nodes.get(courseId)) nodes.remove(courseId);
+          } else {
+            renderCourse(network, nodes, edges, detailsData, prereqsData, courseId);
+          }
+          markGraphDirty();
+          updateSheetView(detailsData, requirements);
+          render();
+        };
+        row.appendChild(btn);
+        extraBucket.appendChild(row);
+      });
+      group.appendChild(extraBucket);
 
       list.appendChild(group);
     });

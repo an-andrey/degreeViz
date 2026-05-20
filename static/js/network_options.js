@@ -114,9 +114,12 @@ export function getVisNetworkOptions(nodes, edges) {
             },
           ],
           onSubmit: (data) => {
-            if (!data.title || !data.code) {
+            if (!data.code) {
               callback(null);
               return false; // Keep modal open if empty
+            }
+            if (!data.title || !String(data.title).trim()) {
+              data.title = `${data.code.toUpperCase()} (Custom Course)`;
             }
             const existingEntry = Object.entries(detailsData).find(([key, course]) => {
               const existingCode = course.code || key;

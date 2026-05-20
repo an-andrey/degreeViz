@@ -190,16 +190,6 @@ def extract_program_requirements(soup):
         if _is_required_heading(b.title):
             b.category = "CORE"
 
-    # fallback: if a heading has no explicit required word, treat max-min-credit bucket as CORE.
-    by_heading = {}
-    for b in buckets:
-        heading = b.id.split("-")[0] if b.id else ""
-        by_heading.setdefault(heading, []).append(b)
-    for _, group in by_heading.items():
-        if not any(g.category == "CORE" for g in group):
-            core_candidate = max(group, key=lambda x: x.min_credits)
-            core_candidate.category = "CORE"
-
     course_to_bucket = {}
     totals = {"core": 0.0, "comp": 0.0, "elec": 0.0}
     for b in buckets:

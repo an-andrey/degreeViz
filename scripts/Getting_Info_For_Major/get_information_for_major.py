@@ -1,6 +1,7 @@
 from scripts.Getting_Info_For_Major import get_courses_of_major, get_prereqs, program_requirements
 from scripts import utils
 import json
+import re
 
 #Given the link from provided from the programs.json file, it grabs all the courses of the major, and compiles all the info for each course.
 
@@ -18,6 +19,17 @@ def process_program_data(program_url, major):
         program_soup = get_courses_of_major.get_program_soup(program_url)
         course_codes = get_courses_of_major.get_program_codes(program_url, soup=program_soup)
         requirements_data = program_requirements.extract_program_requirements(program_soup)
+        major_slug = re.sub(r"[^a-z0-9]+", "-", (major or "program").lower()).strip("-") or "program"
+        for idx, bucket in enumerate(requirements_data.get("buckets", []), start=1):
+            bucket["program_name"] = major
+            bucket_id = bucket.get("id") or f"bucket-{idx}"
+            if not str(bucket_id).startswith(f"{major_slug}-"):
+                bucket["id"] = f"{major_slug}-{bucket_id}"
+
+        requirements_data["course_to_bucket"] = {
+            code: (f"{major_slug}-{bucket_id}" if bucket_id and not str(bucket_id).startswith(f"{major_slug}-") else bucket_id)
+            for code, bucket_id in requirements_data.get("course_to_bucket", {}).items()
+        }
         rule_texts=[b.get("constraints_text") for b in requirements_data.get("buckets",[]) if b.get("constraints_text")]
         requirements_data["parsed_rules"] = get_prereqs.parse_requirement_rules(major, rule_texts) if rule_texts else []
         if not course_codes:
