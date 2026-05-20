@@ -5,16 +5,8 @@ import { updateSheetView } from "./sheet_view.js";
 
 export function getVisNetworkOptions(nodes, edges) {
   function addCourseToAdditionalBucket(courseId, category) {
-    const requirements = window.programRequirements;
-    if (!requirements?.buckets?.length || !category) return;
-    const normalized = String(category).toUpperCase();
-    const targetBucket = requirements.buckets.find((bucket) =>
-      String(bucket.category || "").toUpperCase() === normalized,
-    );
-    if (!targetBucket) return;
-    targetBucket.additional_courses = targetBucket.additional_courses || [];
-    if (!targetBucket.additional_courses.includes(courseId) && !(targetBucket.courses || []).includes(courseId)) {
-      targetBucket.additional_courses.push(courseId);
+    if (typeof window.syncCourseBucketAssignment === "function") {
+      window.syncCourseBucketAssignment(courseId, category);
     }
   }
   return {
@@ -152,6 +144,7 @@ export function getVisNetworkOptions(nodes, edges) {
                   ),
                   color: getStatusColor(existingCourse.status || "Unassigned"),
                 });
+                markGraphDirty();
                 callback(null);
                 window.dispatchEvent(new Event("degreeviz:data-updated"));
                 return true;
@@ -220,6 +213,7 @@ export function getVisNetworkOptions(nodes, edges) {
             }).then((response) => {
               if (response.ok) markGraphDirty();
             });
+            markGraphDirty();
             window.dispatchEvent(new Event("degreeviz:data-updated"));
 
             return true; // Success! Close the modal.

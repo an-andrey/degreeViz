@@ -12,9 +12,12 @@ function parseProgramName(bucket = {}, index = 0) {
   const explicitName = bucket.program_name || bucket.program || bucket.major_name;
   if (explicitName) return String(explicitName);
   const bucketId = String(bucket.id || "");
-  const parts = bucketId.split("-").filter(Boolean);
-  if (parts.length > 1) {
-    return parts.slice(0, 2).join(" ").replace(/\b\w/g, (c) => c.toUpperCase());
+  const normalized = bucketId
+    .replace(/-(required|complementary|elective|program-prerequisites|core|courses).*$/i, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  if (normalized) {
+    return normalized.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   }
   return `Program ${index + 1}`;
 }
@@ -61,6 +64,20 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
 
   const requirements = window.programRequirements || { buckets: [] };
   ensureBucketCourseData(requirements, detailsData);
+
+  window.syncCourseBucketAssignment = (courseId, category) => {
+    if (!requirements?.buckets?.length || !courseId || !category) return;
+    const normalized = String(category).toUpperCase();
+    requirements.buckets.forEach((bucket) => {
+      bucket.additional_courses = (bucket.additional_courses || []).filter((id) => id !== courseId);
+    });
+    const targetBucket = requirements.buckets.find((bucket) => String(bucket.category || "").toUpperCase() === normalized);
+    if (!targetBucket) return;
+    targetBucket.additional_courses = targetBucket.additional_courses || [];
+    if (!targetBucket.additional_courses.includes(courseId) && !(targetBucket.courses || []).includes(courseId)) {
+      targetBucket.additional_courses.push(courseId);
+    }
+  };
 
   function syncFlagsFromGraph() {
     const onGraph = new Set(nodes.getIds());

@@ -204,6 +204,10 @@ export function setupSidebar(
         performWithoutHistory(() => {
           nodes.update({ id: currentlySelectedNodeId, label: newLabel });
         });
+        if (typeof window.syncCourseBucketAssignment === "function") {
+          window.syncCourseBucketAssignment(currentlySelectedNodeId, nData.category);
+          window.dispatchEvent(new Event("degreeviz:data-updated"));
+        }
         triggerDataSync();
       }
     });
