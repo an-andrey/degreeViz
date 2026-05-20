@@ -104,7 +104,7 @@ def extract_program_requirements(soup):
                 category=bucket_category,
                 min_credits=min_credits,
                 max_credits=max_credits,
-                constraints_text=pending_constraint_text or (bucket_label if ("excluding" in lower_label or "level or above" in lower_label) else None),
+                constraints_text=(pending_constraint_text if (pending_constraint_text and _clean_text(pending_constraint_text) != _clean_text(bucket_label)) else None),
             )
 
             for row in table.select("tbody > tr"):

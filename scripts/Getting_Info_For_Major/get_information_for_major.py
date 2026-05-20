@@ -72,7 +72,7 @@ def process_program_data(program_url, major):
                 "requirement_bucket_title": bucket.get("title") if bucket else None,
                 "requirement_min_credits": bucket.get("min_credits") if bucket else 0,
                 "requirement_max_credits": bucket.get("max_credits") if bucket else None,
-                "include_in_graph": (bucket.get("category", "CORE") == "CORE") if bucket else True,
+                "include_in_graph": True if (bucket and bucket.get("category") == "CORE") else False,
                 "color": utils.parse_semester_to_color(actual_details.get("semesters_offered", ""))
             }
 
@@ -82,7 +82,7 @@ def process_program_data(program_url, major):
                 if course_code_prereq in courses_info:
                     course_details_full[course_code_prereq] = {
                         
-                            "title": f"{courses_info[course_code_prereq]["Title"]} (Prereq)",
+                            "title": f"{courses_info[course_code_prereq]['Title']} (Prereq)",
                             "credits": courses_info[course_code_prereq]["Credits"],
                             "semesters_offered": courses_info[course_code_prereq]["Terms_Offered"],
                             "color": "LightSteelBlue"
@@ -103,7 +103,7 @@ def process_program_data(program_url, major):
                 if prereq_item not in course_details_full:
                     if prereq_item in courses_info:
                         course_details_full[prereq_item] = {
-                            "title": f"{courses_info[prereq_item]["Title"]} (Prereq)",
+                            "title": f"{courses_info[prereq_item]['Title']} (Prereq)",
                             "credits": courses_info[prereq_item]["Credits"],
                             "semesters_offered": courses_info[prereq_item]["Terms_Offered"],
                             "color": "LightSteelBlue"

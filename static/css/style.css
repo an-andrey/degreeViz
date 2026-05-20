@@ -1749,3 +1749,10 @@ button#scrapeButton:disabled {
 .optional-shelf.collapsed {
   max-height: fit-content;
 }
+
+.planner-layout.shelf-hidden {
+  grid-template-columns: 1fr;
+}
+.planner-layout.shelf-hidden .optional-shelf {
+  display: none;
+}

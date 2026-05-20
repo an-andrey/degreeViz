@@ -106,9 +106,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
   const toggleOptionalShelfBtn = document.getElementById("toggleOptionalShelfBtn");
   const optionalShelf = document.getElementById("optionalCourseShelf");
+  const plannerLayout = document.querySelector(".planner-layout");
   if (toggleOptionalShelfBtn && optionalShelf) {
     toggleOptionalShelfBtn.addEventListener("click", () => {
       const collapsed = optionalShelf.classList.toggle("collapsed");
+      if (plannerLayout) plannerLayout.classList.toggle("shelf-hidden", collapsed);
       toggleOptionalShelfBtn.textContent = collapsed ? "Show" : "Hide";
     });
   }
