@@ -82,10 +82,26 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
     const courseCode = String(course.code || courseId || "").toUpperCase();
     const coursePrefix = courseCode.split(" ")[0] || "";
     const matchingBuckets = requirements.buckets.filter((bucket) => String(bucket.category || "").toUpperCase() === normalized);
+    console.debug("[degreeviz][bucket-sync] start", {
+      courseId,
+      courseCode,
+      category: normalized,
+      matchingBucketCount: matchingBuckets.length,
+    });
     const targetBucket = matchingBuckets.find((bucket) => {
       const { prefixes, levelRegex } = parseConstraintHints(bucket.constraints_text);
       const prefixOk = !prefixes.length || prefixes.includes(coursePrefix);
       const levelOk = !levelRegex || levelRegex(courseCode);
+      console.debug("[degreeviz][bucket-sync] evaluate", {
+        bucketId: bucket.id,
+        title: bucket.title,
+        prefixes,
+        coursePrefix,
+        prefixOk,
+        hasLevelRule: !!levelRegex,
+        levelOk,
+        constraint: bucket.constraints_text,
+      });
       return prefixOk && levelOk;
     }) || matchingBuckets[0];
     if (!targetBucket) return;
@@ -93,6 +109,12 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
     if (!targetBucket.additional_courses.includes(courseId) && !(targetBucket.courses || []).includes(courseId)) {
       targetBucket.additional_courses.push(courseId);
     }
+    console.debug("[degreeviz][bucket-sync] assigned", {
+      courseId,
+      targetBucketId: targetBucket.id,
+      targetBucketTitle: targetBucket.title,
+      additionalCourses: targetBucket.additional_courses,
+    });
   };
 
   function syncFlagsFromGraph() {
@@ -147,6 +169,15 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
           if (levelCheck && !levelCheck(c.code || id)) return sum;
           return sum + (parseFloat(c.credits) || 0);
         }, 0);
+        if (bucket.constraints_text) {
+          console.debug("[degreeviz][rule-credits]", {
+            bucketId: bucket.id,
+            title: bucket.title,
+            constraint: bucket.constraints_text,
+            additionalCourses: bucket.additional_courses,
+            additionalInGraphCredits,
+          });
+        }
         const requiredText = (Number(bucket.max_credits || 0) && Number(bucket.max_credits) !== Number(bucket.min_credits)) ? `${bucket.min_credits}-${bucket.max_credits}` : `${bucket.min_credits}`;
 
         wrapper.innerHTML = `<summary>${bucket.title}</summary><div class="optional-bucket-meta">${bucket.category} • Added ${inGraphCredits}/${requiredText} credits${additionalInGraphCredits ? ` • Additional counted: ${additionalInGraphCredits}` : ""}</div>${bucket.constraints_text ? `<div class="optional-rule-box">Rule: ${bucket.constraints_text}</div>` : ""}`;

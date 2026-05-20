@@ -4,6 +4,19 @@ import { generateNodeLabel, getStatusColor } from "./node_utils.js";
 import { updateSheetView } from "./sheet_view.js";
 
 export function getVisNetworkOptions(nodes, edges) {
+  function connectCoursePrereqEdges(courseId) {
+    const newEdges = [];
+    (prereqsData[courseId] || []).forEach((fromNode) => {
+      if (nodes.get(fromNode)) newEdges.push({ from: fromNode, to: courseId, arrows: "to" });
+    });
+    Object.entries(prereqsData).forEach(([toNode, reqs]) => {
+      if (Array.isArray(reqs) && reqs.includes(courseId) && nodes.get(toNode)) {
+        newEdges.push({ from: courseId, to: toNode, arrows: "to" });
+      }
+    });
+    if (newEdges.length) edges.update(newEdges);
+  }
+
   function addCourseToAdditionalBucket(courseId, category) {
     if (typeof window.syncCourseBucketAssignment === "function") {
       window.syncCourseBucketAssignment(courseId, category);
@@ -147,6 +160,7 @@ export function getVisNetworkOptions(nodes, edges) {
                   ),
                   color: getStatusColor(existingCourse.status || "Unassigned"),
                 });
+                connectCoursePrereqEdges(existingId);
                 markGraphDirty();
                 callback(null);
                 window.dispatchEvent(new Event("degreeviz:data-updated"));
@@ -185,6 +199,7 @@ export function getVisNetworkOptions(nodes, edges) {
 
             callback(null);
             nodes.add(newNode);
+            connectCoursePrereqEdges(canonicalId);
 
             detailsData[canonicalId] = {
               code: newNode.code,
@@ -200,7 +215,9 @@ export function getVisNetworkOptions(nodes, edges) {
               include_in_graph: true,
             };
             addCourseToAdditionalBucket(canonicalId, data.category);
-            prereqsData[canonicalId] = [];
+            if (!Array.isArray(prereqsData[canonicalId])) {
+              prereqsData[canonicalId] = [];
+            }
 
             const queryParams = new URLSearchParams({
               request: "add node",
