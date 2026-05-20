@@ -1660,3 +1660,79 @@ button#scrapeButton:disabled {
     max-height: 320px;
   }
 }
+
+.optional-rule-box {
+  margin: 6px 0 8px;
+  padding: 6px 8px;
+  border: 1px solid #d6d3d1;
+  background: #fafaf9;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  color: #44403c;
+}
+
+@media (max-width: 768px) {
+  .page-container.graph-wrapper {
+    width: 98%;
+    margin: 10px auto;
+    padding: 10px;
+  }
+
+  .tabs-header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px;
+  }
+
+  .tabs-header .tab-btn {
+    font-size: 0.85rem;
+    padding: 10px 6px;
+  }
+
+  .global-actions-right {
+    gap: 6px;
+  }
+
+  #saveGraphBtn {
+    font-size: 0.85rem;
+    padding: 8px 10px;
+  }
+
+  .custom-manipulation-buttons {
+    flex-wrap: wrap;
+  }
+
+  .custom-manipulation-buttons > button {
+    flex: 1 1 48%;
+    margin-right: 0;
+  }
+
+  #courseNetwork {
+    min-height: 58vh;
+    height: 58vh;
+  }
+
+  .optional-shelf {
+    border-radius: 10px;
+    padding: 8px;
+  }
+
+  .optional-course-list {
+    max-height: 42vh;
+  }
+
+  .sheet-tables-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .table-card {
+    width: 100%;
+    overflow-x: auto;
+  }
+
+  .styled-table {
+    min-width: 560px;
+  }
+}

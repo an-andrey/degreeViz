@@ -17,6 +17,7 @@ class RequirementBucket:
     min_credits: float = 0
     max_credits: float | None = None
     courses: list[str] = field(default_factory=list)
+    constraints_text: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -26,6 +27,7 @@ class RequirementBucket:
             "min_credits": self.min_credits,
             "max_credits": self.max_credits,
             "courses": self.courses,
+            "constraints_text": self.constraints_text,
         }
 
 
@@ -97,6 +99,7 @@ def extract_program_requirements(soup):
                 category=bucket_category,
                 min_credits=min_credits,
                 max_credits=max_credits,
+                constraints_text=bucket_label if ("selected from" in lower_label or "excluding" in lower_label or "at the" in lower_label) else None,
             )
 
             for row in table.select("tbody > tr"):
