@@ -67,18 +67,23 @@ def extract_program_requirements(soup):
     current_section_title = "Program Courses"
     current_section_category = "CORE"
     pending_bucket_label = ""
+    pending_constraint_text = ""
 
     for element in content_root.find_all(["h2", "p", "div"], recursive=True):
         if element.name == "h2":
             current_section_title = _clean_text(element.get_text(" ", strip=True))
             current_section_category = _category_from_heading(current_section_title)
             pending_bucket_label = ""
+            pending_constraint_text = ""
             continue
 
         if element.name == "p":
             text = _clean_text(element.get_text(" ", strip=True))
-            if "credit" in text.lower() and ("selected from" in text.lower() or "choose" in text.lower()):
+            low = text.lower()
+            if "credit" in low and ("selected from" in low or "choose" in low):
                 pending_bucket_label = text
+            elif ("selected from" in low or "excluding" in low or "level or above" in low) and "credit" in low:
+                pending_constraint_text = text
             continue
 
         if element.name == "div" and "courselist-wrapper" in (element.get("class") or []):
@@ -99,7 +104,7 @@ def extract_program_requirements(soup):
                 category=bucket_category,
                 min_credits=min_credits,
                 max_credits=max_credits,
-                constraints_text=bucket_label if ("selected from" in lower_label or "excluding" in lower_label or "at the" in lower_label) else None,
+                constraints_text=pending_constraint_text or (bucket_label if ("excluding" in lower_label or "level or above" in lower_label) else None),
             )
 
             for row in table.select("tbody > tr"):
@@ -116,6 +121,17 @@ def extract_program_requirements(soup):
             if bucket.courses:
                 bucket.courses = list(dict.fromkeys(bucket.courses))
                 buckets.append(bucket)
+                pending_constraint_text = ""
+
+    deduped=[]
+    seen=set()
+    for b in buckets:
+        key=(b.title,b.category,tuple(sorted(b.courses)))
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(b)
+    buckets=deduped
 
     course_to_bucket = {}
     totals = {"core": 0.0, "comp": 0.0, "elec": 0.0}

@@ -65,7 +65,8 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
         const c = detailsData[id];
         return c && c.include_in_graph ? sum + (parseFloat(c.credits) || 0) : sum;
       }, 0);
-      wrapper.innerHTML = `<h5>${bucket.title}</h5><div class="optional-bucket-meta">${bucket.category} • Added ${inGraphCredits}/${bucket.min_credits}${bucket.max_credits ? `-${bucket.max_credits}` : ""} credits</div>${bucket.constraints_text ? `<div class="optional-rule-box">Rule: ${bucket.constraints_text}</div>` : ""}`;
+      const requiredText = (Number(bucket.max_credits||0) && Number(bucket.max_credits)!==Number(bucket.min_credits)) ? `${bucket.min_credits}-${bucket.max_credits}` : `${bucket.min_credits}`;
+      wrapper.innerHTML = `<h5>${bucket.title}</h5><div class="optional-bucket-meta">${bucket.category} • Added ${inGraphCredits}/${requiredText} credits</div>${bucket.constraints_text ? `<div class="optional-rule-box">Rule: ${bucket.constraints_text}</div>` : ""}`;
 
       (bucket.courses || []).forEach((courseId) => {
         const c = detailsData[courseId];

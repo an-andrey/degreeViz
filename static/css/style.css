@@ -1736,3 +1736,16 @@ button#scrapeButton:disabled {
     min-width: 560px;
   }
 }
+
+.optional-shelf-header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+}
+.optional-shelf.collapsed .optional-course-list {
+  display:none;
+}
+.optional-shelf.collapsed {
+  max-height: fit-content;
+}

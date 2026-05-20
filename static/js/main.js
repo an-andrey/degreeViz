@@ -104,6 +104,15 @@ document.addEventListener("DOMContentLoaded", function () {
   );
   setupOptionalCoursesShelf(network, nodes, edges, detailsData, prereqsData, markGraphDirty);
 
+  const toggleOptionalShelfBtn = document.getElementById("toggleOptionalShelfBtn");
+  const optionalShelf = document.getElementById("optionalCourseShelf");
+  if (toggleOptionalShelfBtn && optionalShelf) {
+    toggleOptionalShelfBtn.addEventListener("click", () => {
+      const collapsed = optionalShelf.classList.toggle("collapsed");
+      toggleOptionalShelfBtn.textContent = collapsed ? "Show" : "Hide";
+    });
+  }
+
   // Core Network Events
   network.on("click", function (params) {
     if (network.manipulation.options.enabled) {
