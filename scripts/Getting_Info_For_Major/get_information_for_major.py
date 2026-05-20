@@ -18,6 +18,8 @@ def process_program_data(program_url, major):
         program_soup = get_courses_of_major.get_program_soup(program_url)
         course_codes = get_courses_of_major.get_program_codes(program_url, soup=program_soup)
         requirements_data = program_requirements.extract_program_requirements(program_soup)
+        rule_texts=[b.get("constraints_text") for b in requirements_data.get("buckets",[]) if b.get("constraints_text")]
+        requirements_data["parsed_rules"] = get_prereqs.parse_requirement_rules(major, rule_texts) if rule_texts else []
         if not course_codes:
             print(f"No course codes found for URL: {program_url}")
             return None, None, None

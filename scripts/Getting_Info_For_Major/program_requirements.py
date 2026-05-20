@@ -77,6 +77,26 @@ def _credit_bounds(text: str) -> tuple[float, float | None]:
     return 0, None
 
 
+
+
+def _extract_inline_courses(text: str) -> list[str]:
+    return list(dict.fromkeys([m.group(0) for m in COURSE_CODE_RE.finditer(text)]))
+
+
+def _flush_standalone_text_bucket(text: str, buckets: list[RequirementBucket], current_section_title: str) -> None:
+    min_credits, max_credits = _credit_bounds(text)
+    courses = _extract_inline_courses(text)
+    bucket = RequirementBucket(
+        id=_slugify(f"{current_section_title}-{text}", f"bucket-{len(buckets)+1}"),
+        title=text,
+        category="COMPLEMENTARY",
+        min_credits=min_credits,
+        max_credits=max_credits,
+        courses=courses,
+        constraints_text=text,
+    )
+    buckets.append(bucket)
+
 def extract_program_requirements(soup):
     content_root = soup.find(id="coursestext") or soup.find("main") or soup
 
@@ -101,8 +121,21 @@ def extract_program_requirements(soup):
             if "selected from" in text.lower() and "credit" in text.lower():
                 pending_bucket_label = text
                 pending_constraint_text = ""
+                next_div = element.find_next_sibling()
+                while next_div and getattr(next_div, "name", None) is None:
+                    next_div = next_div.find_next_sibling()
+                if not (next_div and next_div.name == "div" and "courselist-wrapper" in (next_div.get("class") or [])):
+                    _flush_standalone_text_bucket(text, buckets, current_section_title)
+                    pending_bucket_label = ""
+
             elif _looks_like_constraint(text):
                 pending_constraint_text = text
+                next_div = element.find_next_sibling()
+                while next_div and getattr(next_div, "name", None) is None:
+                    next_div = next_div.find_next_sibling()
+                if not (next_div and next_div.name == "div" and "courselist-wrapper" in (next_div.get("class") or [])):
+                    _flush_standalone_text_bucket(text, buckets, current_section_title)
+                    pending_constraint_text = ""
             continue
 
         if element.name == "div" and "courselist-wrapper" in (element.get("class") or []):
