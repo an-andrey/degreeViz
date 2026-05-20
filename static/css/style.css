@@ -1619,3 +1619,44 @@ button#scrapeButton:disabled {
 }
 
 .optional-shelf-title { margin: 0 0 6px 0; }
+
+
+.planner-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 14px;
+  align-items: start;
+}
+
+#courseNetwork {
+  min-height: 760px;
+}
+
+.optional-shelf {
+  margin-left: 0;
+  width: 100%;
+  max-width: none;
+  position: sticky;
+  top: 90px;
+  max-height: calc(100vh - 140px);
+  overflow: hidden;
+}
+
+.optional-course-list {
+  max-height: calc(100vh - 230px);
+}
+
+@media (max-width: 1200px) {
+  .planner-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .optional-shelf {
+    position: static;
+    max-height: none;
+  }
+
+  .optional-course-list {
+    max-height: 320px;
+  }
+}
