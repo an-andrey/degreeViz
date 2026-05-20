@@ -33,6 +33,13 @@ function getConstraintRegex(constraintText = "") {
   };
 }
 
+function parseConstraintHints(constraintText = "") {
+  const text = String(constraintText || "").toUpperCase();
+  const prefixes = Array.from(new Set((text.match(/\b[A-Z]{4}\b/g) || [])));
+  const levelRegex = getConstraintRegex(constraintText);
+  return { prefixes, levelRegex };
+}
+
 function renderCourse(network, nodes, edges, detailsData, prereqsData, courseId) {
   if (nodes.get(courseId) || !detailsData[courseId]) return;
   const d = detailsData[courseId];
@@ -71,7 +78,16 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
     requirements.buckets.forEach((bucket) => {
       bucket.additional_courses = (bucket.additional_courses || []).filter((id) => id !== courseId);
     });
-    const targetBucket = requirements.buckets.find((bucket) => String(bucket.category || "").toUpperCase() === normalized);
+    const course = detailsData[courseId] || {};
+    const courseCode = String(course.code || courseId || "").toUpperCase();
+    const coursePrefix = courseCode.split(" ")[0] || "";
+    const matchingBuckets = requirements.buckets.filter((bucket) => String(bucket.category || "").toUpperCase() === normalized);
+    const targetBucket = matchingBuckets.find((bucket) => {
+      const { prefixes, levelRegex } = parseConstraintHints(bucket.constraints_text);
+      const prefixOk = !prefixes.length || prefixes.includes(coursePrefix);
+      const levelOk = !levelRegex || levelRegex(courseCode);
+      return prefixOk && levelOk;
+    }) || matchingBuckets[0];
     if (!targetBucket) return;
     targetBucket.additional_courses = targetBucket.additional_courses || [];
     if (!targetBucket.additional_courses.includes(courseId) && !(targetBucket.courses || []).includes(courseId)) {

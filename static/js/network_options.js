@@ -169,8 +169,9 @@ export function getVisNetworkOptions(nodes, edges) {
               data.status,
             );
 
+            const canonicalId = data.code.toUpperCase();
             const newNode = {
-              id: nodeData.id,
+              id: canonicalId,
               x: nodeData.x,
               y: nodeData.y,
               code: data.code.toUpperCase(),
@@ -185,7 +186,7 @@ export function getVisNetworkOptions(nodes, edges) {
             callback(null);
             nodes.add(newNode);
 
-            detailsData[newNode.id] = {
+            detailsData[canonicalId] = {
               code: newNode.code,
               title: data.title,
               credits: data.credits,
@@ -198,12 +199,12 @@ export function getVisNetworkOptions(nodes, edges) {
               y: newNode.y,
               include_in_graph: true,
             };
-            addCourseToAdditionalBucket(newNode.id, data.category);
-            prereqsData[newNode.id] = [];
+            addCourseToAdditionalBucket(canonicalId, data.category);
+            prereqsData[canonicalId] = [];
 
             const queryParams = new URLSearchParams({
               request: "add node",
-              node_id: newNode.id,
+              node_id: canonicalId,
               code: newNode.code,
               node_title: data.title,
               credits: data.credits,
