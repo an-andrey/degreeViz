@@ -65,6 +65,9 @@ def process_program_data(program_url, major):
         courses_prereqs_data = {}
         if gemini_data:
             courses_prereqs_data = get_prereqs.get_prereq_list(major, gemini_data)
+            if not isinstance(courses_prereqs_data, dict):
+                print(f"Warning: Gemini prereq response was not a dict for program {major}. Got type={type(courses_prereqs_data).__name__}")
+                courses_prereqs_data = {}
         else:
             print(f"No data prepared for Gemini for program: {major}")
 

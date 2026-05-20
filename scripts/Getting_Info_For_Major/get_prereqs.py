@@ -30,7 +30,7 @@ def get_prereq_list(major_name, major_courses_data):
                 contents=prompt
             )
         except Exception as e: 
-            return "There was an error with contacting Gemini"
+            return {}
 
         text_response = response.text.strip()
 
@@ -45,7 +45,7 @@ def get_prereq_list(major_name, major_courses_data):
         resolved_prereqs = json.loads(text_response.replace("'", '"'))
         return resolved_prereqs
     except Exception as e:
-        return f"Error: {e}\nResponse from Gemini: {response}"
+        return {}
 
 
 def parse_requirement_rules(major_name, rule_texts):
