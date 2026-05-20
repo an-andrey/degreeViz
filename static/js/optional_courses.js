@@ -8,9 +8,26 @@ function ensureBucketCourseData(requirements, detailsData) {
   });
 }
 
-function parseProgramName(bucketId = "") {
-  const parts = String(bucketId).split("-");
-  return parts.length ? parts[0].toUpperCase() : "PROGRAM";
+function parseProgramName(bucket = {}, index = 0) {
+  const explicitName = bucket.program_name || bucket.program || bucket.major_name;
+  if (explicitName) return String(explicitName);
+  const bucketId = String(bucket.id || "");
+  const parts = bucketId.split("-").filter(Boolean);
+  if (parts.length > 1) {
+    return parts.slice(0, 2).join(" ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  return `Program ${index + 1}`;
+}
+
+function getConstraintRegex(constraintText = "") {
+  const text = String(constraintText).toLowerCase();
+  const m = text.match(/(\d{3})\s*level\s*or\s*above/);
+  if (!m) return null;
+  const minLevel = Number(m[1]);
+  return (courseCode = "") => {
+    const codeMatch = String(courseCode).match(/(\d{3})/);
+    return codeMatch ? Number(codeMatch[1]) >= minLevel : false;
+  };
 }
 
 function renderCourse(network, nodes, edges, detailsData, prereqsData, courseId) {
@@ -63,8 +80,8 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
     root.style.display = "block";
 
     const byProgram = {};
-    buckets.forEach((b) => {
-      const program = parseProgramName(b.id);
+    buckets.forEach((b, idx) => {
+      const program = parseProgramName(b, idx);
       byProgram[program] = byProgram[program] || [];
       byProgram[program].push(b);
     });
@@ -76,7 +93,7 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
       group.innerHTML = `<summary>${program}</summary>`;
 
       programBuckets.forEach((bucket) => {
-        if ((bucket.category || "CORE") === "CORE" && Number(bucket.max_credits || 0) === 0) return;
+        bucket.additional_courses = bucket.additional_courses || [];
 
         const wrapper = document.createElement("details");
         wrapper.className = "optional-bucket";
@@ -86,11 +103,50 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
           const c = detailsData[id];
           return c && c.include_in_graph ? sum + (parseFloat(c.credits) || 0) : sum;
         }, 0);
+        const levelCheck = getConstraintRegex(bucket.constraints_text);
+        const additionalInGraphCredits = (bucket.additional_courses || []).reduce((sum, id) => {
+          const c = detailsData[id];
+          if (!c || !c.include_in_graph) return sum;
+          if (levelCheck && !levelCheck(c.code || id)) return sum;
+          return sum + (parseFloat(c.credits) || 0);
+        }, 0);
         const requiredText = (Number(bucket.max_credits || 0) && Number(bucket.max_credits) !== Number(bucket.min_credits)) ? `${bucket.min_credits}-${bucket.max_credits}` : `${bucket.min_credits}`;
 
-        wrapper.innerHTML = `<summary>${bucket.title}</summary><div class="optional-bucket-meta">${bucket.category} • Added ${inGraphCredits}/${requiredText} credits</div>${bucket.constraints_text ? `<div class="optional-rule-box">Rule: ${bucket.constraints_text}</div>` : ""}`;
+        wrapper.innerHTML = `<summary>${bucket.title}</summary><div class="optional-bucket-meta">${bucket.category} • Added ${inGraphCredits}/${requiredText} credits${additionalInGraphCredits ? ` • Additional counted: ${additionalInGraphCredits}` : ""}</div>${bucket.constraints_text ? `<div class="optional-rule-box">Rule: ${bucket.constraints_text}</div>` : ""}`;
 
         (bucket.courses || []).forEach((courseId) => {
+          const c = detailsData[courseId];
+          if (!c) return;
+          const row = document.createElement("div");
+          row.className = "optional-course-row";
+          const isOnGraph = !!c.include_in_graph;
+          row.innerHTML = `<span><strong>${c.code || courseId}</strong> ${c.title} (${c.credits})</span>`;
+          const btn = document.createElement("button");
+          btn.textContent = isOnGraph ? "Remove" : "Add";
+          btn.className = isOnGraph ? "danger-btn" : "secondary-btn";
+          btn.onclick = () => {
+            if (isOnGraph) {
+              c.include_in_graph = false;
+              if (nodes.get(courseId)) nodes.remove(courseId);
+            } else {
+              renderCourse(network, nodes, edges, detailsData, prereqsData, courseId);
+            }
+            markGraphDirty();
+            updateSheetView(detailsData, requirements);
+            render();
+          };
+          row.appendChild(btn);
+          wrapper.appendChild(row);
+        });
+
+        if ((bucket.additional_courses || []).length) {
+          const extraHeader = document.createElement("div");
+          extraHeader.className = "optional-bucket-meta";
+          extraHeader.textContent = "Additional courses";
+          wrapper.appendChild(extraHeader);
+        }
+
+        (bucket.additional_courses || []).forEach((courseId) => {
           const c = detailsData[courseId];
           if (!c) return;
           const row = document.createElement("div");

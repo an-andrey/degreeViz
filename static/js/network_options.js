@@ -4,6 +4,19 @@ import { generateNodeLabel, getStatusColor } from "./node_utils.js";
 import { updateSheetView } from "./sheet_view.js";
 
 export function getVisNetworkOptions(nodes, edges) {
+  function addCourseToAdditionalBucket(courseId, category) {
+    const requirements = window.programRequirements;
+    if (!requirements?.buckets?.length || !category) return;
+    const normalized = String(category).toUpperCase();
+    const targetBucket = requirements.buckets.find((bucket) =>
+      String(bucket.category || "").toUpperCase() === normalized,
+    );
+    if (!targetBucket) return;
+    targetBucket.additional_courses = targetBucket.additional_courses || [];
+    if (!targetBucket.additional_courses.includes(courseId) && !(targetBucket.courses || []).includes(courseId)) {
+      targetBucket.additional_courses.push(courseId);
+    }
+  }
   return {
     locale: "en",
     locales: {
@@ -113,16 +126,37 @@ export function getVisNetworkOptions(nodes, edges) {
               callback(null);
               return false; // Keep modal open if empty
             }
+            const existingEntry = Object.entries(detailsData).find(([key, course]) => {
+              const existingCode = course.code || key;
+              return existingCode.toUpperCase() === data.code.toUpperCase();
+            });
 
-            // UNIQUE COURSE CHECK: Safely checks older nodes that might lack a .code property
-            const codeExists = Object.entries(detailsData).some(
-              ([key, course]) => {
-                const existingCode = course.code || key; // Fallback to the dictionary key for older nodes
-                return existingCode.toUpperCase() === data.code.toUpperCase();
-              },
-            );
+            if (existingEntry) {
+              const [existingId, existingCourse] = existingEntry;
+              if (existingCourse.include_in_graph === false) {
+                existingCourse.include_in_graph = true;
+                existingCourse.category = data.category || existingCourse.category;
+                addCourseToAdditionalBucket(existingId, existingCourse.category);
+                nodes.add({
+                  id: existingId,
+                  x: nodeData.x,
+                  y: nodeData.y,
+                  label: generateNodeLabel(
+                    existingCourse.code || existingId,
+                    existingCourse.title,
+                    existingCourse.credits,
+                    existingCourse.semesters_offered,
+                    existingCourse.category,
+                    existingCourse.planned_semester,
+                    existingCourse.status,
+                  ),
+                  color: getStatusColor(existingCourse.status || "Unassigned"),
+                });
+                callback(null);
+                window.dispatchEvent(new Event("degreeviz:data-updated"));
+                return true;
+              }
 
-            if (codeExists) {
               alert(
                 `Error: The course ${data.code.toUpperCase()} is already on your graph!`,
               );
@@ -166,7 +200,9 @@ export function getVisNetworkOptions(nodes, edges) {
               color: newNode.color,
               x: newNode.x,
               y: newNode.y,
+              include_in_graph: true,
             };
+            addCourseToAdditionalBucket(newNode.id, data.category);
             prereqsData[newNode.id] = [];
 
             const queryParams = new URLSearchParams({
@@ -184,6 +220,7 @@ export function getVisNetworkOptions(nodes, edges) {
             }).then((response) => {
               if (response.ok) markGraphDirty();
             });
+            window.dispatchEvent(new Event("degreeviz:data-updated"));
 
             return true; // Success! Close the modal.
           },
