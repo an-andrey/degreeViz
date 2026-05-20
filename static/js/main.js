@@ -144,6 +144,7 @@ document.addEventListener("DOMContentLoaded", function () {
       performWithoutHistory(() => nodes.update(updates));
       saveGraphState();
       markGraphDirty();
+      notifyDataUpdated();
     }
   });
 
@@ -153,3 +154,6 @@ document.addEventListener("DOMContentLoaded", function () {
     updateGpaTracker(detailsData);
   }, 500);
 });
+
+
+function notifyDataUpdated(){ window.dispatchEvent(new Event("degreeviz:data-updated")); }

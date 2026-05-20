@@ -1749,3 +1749,25 @@ button#scrapeButton:disabled {
 .optional-shelf.collapsed {
   max-height: fit-content;
 }
+
+.optional-program-group {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background:#fff;
+  margin-bottom:10px;
+  padding:6px;
+}
+.optional-program-group > summary {
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 2px;
+}
+.optional-bucket > summary {
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+.optional-bucket > summary::-webkit-details-marker { display:none; }
+.optional-bucket > summary::before { content: "▸ "; color: var(--text-muted);}
+.optional-bucket[open] > summary::before { content: "▾ "; }
