@@ -82,7 +82,7 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
     const courseCode = String(course.code || courseId || "").toUpperCase();
     const coursePrefix = courseCode.split(" ")[0] || "";
     const matchingBuckets = requirements.buckets.filter((bucket) => String(bucket.category || "").toUpperCase() === normalized);
-    console.debug("[degreeviz][bucket-sync] start", {
+    console.log("[degreeviz][bucket-sync] start", {
       courseId,
       courseCode,
       category: normalized,
@@ -92,7 +92,7 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
       const { prefixes, levelRegex } = parseConstraintHints(bucket.constraints_text);
       const prefixOk = !prefixes.length || prefixes.includes(coursePrefix);
       const levelOk = !levelRegex || levelRegex(courseCode);
-      console.debug("[degreeviz][bucket-sync] evaluate", {
+      console.log("[degreeviz][bucket-sync] evaluate", {
         bucketId: bucket.id,
         title: bucket.title,
         prefixes,
@@ -109,7 +109,7 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
     if (!targetBucket.additional_courses.includes(courseId) && !(targetBucket.courses || []).includes(courseId)) {
       targetBucket.additional_courses.push(courseId);
     }
-    console.debug("[degreeviz][bucket-sync] assigned", {
+    console.log("[degreeviz][bucket-sync] assigned", {
       courseId,
       targetBucketId: targetBucket.id,
       targetBucketTitle: targetBucket.title,
@@ -170,7 +170,7 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
           return sum + (parseFloat(c.credits) || 0);
         }, 0);
         if (bucket.constraints_text) {
-          console.debug("[degreeviz][rule-credits]", {
+          console.log("[degreeviz][rule-credits]", {
             bucketId: bucket.id,
             title: bucket.title,
             constraint: bucket.constraints_text,

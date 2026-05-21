@@ -4,6 +4,47 @@ import { generateNodeLabel, getStatusColor } from "./node_utils.js";
 import { updateSheetView } from "./sheet_view.js";
 
 export function getVisNetworkOptions(nodes, edges) {
+  window.coursePoolStore = window.coursePoolStore || {};
+  Object.keys(detailsData || {}).forEach((id) => {
+    const d = detailsData[id] || {};
+    if (d.include_in_graph === false) {
+      window.coursePoolStore[id] = {
+        detail: d,
+        prereqs: Array.isArray(prereqsData[id]) ? [...prereqsData[id]] : [],
+      };
+    }
+  });
+
+  function addNodeFromDetails(courseId, fallbackX = 0, fallbackY = 0) {
+    const d = detailsData[courseId];
+    if (!d || nodes.get(courseId)) return;
+    nodes.add({
+      id: courseId,
+      x: d.x ?? fallbackX,
+      y: d.y ?? fallbackY,
+      label: generateNodeLabel(
+        d.code || courseId,
+        d.title,
+        d.credits,
+        d.semesters_offered,
+        d.category,
+        d.planned_semester,
+        d.status,
+      ),
+      color: getStatusColor(d.status || "Unassigned"),
+    });
+    d.include_in_graph = true;
+  }
+
+  function ensurePrereqNodes(courseId, originX = 0, originY = 0) {
+    const prereqs = Array.isArray(prereqsData[courseId]) ? prereqsData[courseId] : [];
+    prereqs.forEach((preId, idx) => {
+      if (detailsData[preId] && !nodes.get(preId)) {
+        addNodeFromDetails(preId, originX - 220, originY + idx * 120);
+      }
+    });
+  }
+
   function connectCoursePrereqEdges(courseId) {
     const newEdges = [];
     (prereqsData[courseId] || []).forEach((fromNode) => {
@@ -145,21 +186,8 @@ export function getVisNetworkOptions(nodes, edges) {
                 existingCourse.include_in_graph = true;
                 existingCourse.category = data.category || existingCourse.category;
                 addCourseToAdditionalBucket(existingId, existingCourse.category);
-                nodes.add({
-                  id: existingId,
-                  x: nodeData.x,
-                  y: nodeData.y,
-                  label: generateNodeLabel(
-                    existingCourse.code || existingId,
-                    existingCourse.title,
-                    existingCourse.credits,
-                    existingCourse.semesters_offered,
-                    existingCourse.category,
-                    existingCourse.planned_semester,
-                    existingCourse.status,
-                  ),
-                  color: getStatusColor(existingCourse.status || "Unassigned"),
-                });
+                addNodeFromDetails(existingId, nodeData.x, nodeData.y);
+                ensurePrereqNodes(existingId, nodeData.x, nodeData.y);
                 connectCoursePrereqEdges(existingId);
                 markGraphDirty();
                 callback(null);
@@ -199,6 +227,7 @@ export function getVisNetworkOptions(nodes, edges) {
 
             callback(null);
             nodes.add(newNode);
+            ensurePrereqNodes(canonicalId, nodeData.x, nodeData.y);
             connectCoursePrereqEdges(canonicalId);
 
             detailsData[canonicalId] = {
@@ -218,6 +247,10 @@ export function getVisNetworkOptions(nodes, edges) {
             if (!Array.isArray(prereqsData[canonicalId])) {
               prereqsData[canonicalId] = [];
             }
+            window.coursePoolStore[canonicalId] = {
+              detail: detailsData[canonicalId],
+              prereqs: [...prereqsData[canonicalId]],
+            };
 
             const queryParams = new URLSearchParams({
               request: "add node",
