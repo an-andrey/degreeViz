@@ -1615,6 +1615,13 @@ button#scrapeButton:disabled {
   flex-wrap: wrap;
   margin: 8px 0 10px 0;
 }
+
+.optional-bucket-actions .secondary-btn,
+.optional-bucket-actions .danger-btn {
+  min-width: 40px;
+  padding: 6px 10px;
+  font-size: 1rem;
+}
 .optional-course-row:first-of-type {
   border-top: none;
 }

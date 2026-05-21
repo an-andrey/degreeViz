@@ -1,5 +1,6 @@
 import { generateNodeLabel, getStatusColor } from "./node_utils.js";
 import { updateSheetView } from "./sheet_view.js";
+import { openCustomPrompt } from "./ui_handler.js";
 
 function ensureBucketCourseData(requirements, detailsData) {
   if (!requirements?.buckets) return;
@@ -188,37 +189,97 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
 
         const actions = document.createElement("div");
         actions.className = "optional-bucket-actions";
+        const editBucketBtn = document.createElement("button");
+        editBucketBtn.className = "secondary-btn";
+        editBucketBtn.title = "Edit bucket";
+        editBucketBtn.textContent = "✏️";
+        editBucketBtn.onclick = () => {
+          openCustomPrompt({
+            title: "Edit Bucket",
+            submitText: "Save Bucket",
+            fields: [
+              { id: "title", label: "Bucket Title", defaultValue: bucket.title || "" },
+              { id: "min_credits", label: "Min Credits", defaultValue: String(bucket.min_credits ?? 0) },
+              { id: "max_credits", label: "Max Credits (optional)", defaultValue: bucket.max_credits == null ? "" : String(bucket.max_credits) },
+            ],
+            onSubmit: (data) => {
+              bucket.title = String(data.title || bucket.title || "").trim();
+              bucket.min_credits = Number.isFinite(Number(data.min_credits)) ? Number(data.min_credits) : 0;
+              bucket.max_credits = String(data.max_credits || "").trim() === "" ? null : Number(data.max_credits);
+              markGraphDirty();
+              updateSheetView(detailsData, requirements);
+              render();
+              return true;
+            },
+          });
+        };
         const addToBucketBtn = document.createElement("button");
         addToBucketBtn.className = "secondary-btn";
-        addToBucketBtn.textContent = "+ Add to Bucket";
+        addToBucketBtn.title = "Add course to bucket";
+        addToBucketBtn.textContent = "➕";
         addToBucketBtn.onclick = () => {
-          const codeInput = prompt("Course code (e.g. COMP 551)", "");
-          const normalized = normalizedCode(codeInput || "");
-          if (!normalized) return;
-          const existingId = Object.keys(detailsData).find((id) => normalizedCode(detailsData[id]?.code || id) === normalized);
-          const courseId = existingId || normalized;
-          if (!detailsData[courseId]) {
-            detailsData[courseId] = {
-              code: normalized,
-              title: `${normalized} (User Added)`,
-              credits: "3",
-              semesters_offered: "Unknown",
-              category: bucket.category || "COMPLEMENTARY",
-              status: "Unassigned",
-              planned_semester: "Unassigned",
-              include_in_graph: false,
-            };
-            prereqsData[courseId] = prereqsData[courseId] || [];
-          }
-          bucket.additional_courses = bucket.additional_courses || [];
-          if (!bucket.additional_courses.includes(courseId) && !(bucket.courses || []).includes(courseId)) {
-            bucket.additional_courses.push(courseId);
-          }
-          markGraphDirty();
-          updateSheetView(detailsData, requirements);
-          render();
+          openCustomPrompt({
+            title: "Add Course to Bucket",
+            submitText: "Add Course",
+            fields: [
+              { id: "code", label: "Course Code", type: "course_search", required: true },
+              { id: "title", label: "Course Title (optional)" },
+              { id: "credits", label: "Credits", defaultValue: "3" },
+            ],
+            onSubmit: (data) => {
+              const normalized = normalizedCode(data.code || "");
+              if (!normalized) return false;
+              const existingId = Object.keys(detailsData).find((id) => normalizedCode(detailsData[id]?.code || id) === normalized);
+              const courseId = existingId || normalized;
+              if (!detailsData[courseId]) {
+                detailsData[courseId] = {
+                  code: normalized,
+                  title: data.title || `${normalized} (User Added)`,
+                  credits: data.credits || "3",
+                  semesters_offered: "Unknown",
+                  category: bucket.category || "COMPLEMENTARY",
+                  status: "Unassigned",
+                  planned_semester: "Unassigned",
+                  include_in_graph: false,
+                };
+                prereqsData[courseId] = prereqsData[courseId] || [];
+              }
+              bucket.additional_courses = bucket.additional_courses || [];
+              if (!bucket.additional_courses.includes(courseId) && !(bucket.courses || []).includes(courseId)) {
+                bucket.additional_courses.push(courseId);
+              }
+              markGraphDirty();
+              updateSheetView(detailsData, requirements);
+              render();
+              return true;
+            },
+          });
         };
+        const deleteBucketBtn = document.createElement("button");
+        deleteBucketBtn.className = "danger-btn";
+        deleteBucketBtn.title = "Delete bucket";
+        deleteBucketBtn.textContent = "🗑️";
+        deleteBucketBtn.onclick = () => {
+          openCustomPrompt({
+            title: "Delete Bucket",
+            submitText: "Delete",
+            fields: [
+              { id: "confirm", label: `Type DELETE to remove '${bucket.title}'` },
+            ],
+            onSubmit: (data) => {
+              if (String(data.confirm || "").trim().toUpperCase() !== "DELETE") return false;
+              const idx = requirements.buckets.findIndex((b) => b.id === bucket.id);
+              if (idx >= 0) requirements.buckets.splice(idx, 1);
+              markGraphDirty();
+              updateSheetView(detailsData, requirements);
+              render();
+              return true;
+            },
+          });
+        };
+        actions.appendChild(editBucketBtn);
         actions.appendChild(addToBucketBtn);
+        actions.appendChild(deleteBucketBtn);
 
         const inGraphCredits = (bucket.courses || []).reduce((sum, id) => {
           const c = detailsData[id];
