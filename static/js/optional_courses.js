@@ -85,6 +85,11 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
     });
     const course = detailsData[courseId] || {};
     const courseCode = normalizedCode(course.code || courseId || "");
+    const isScrapedCourse = requirements.buckets.some((bucket) => (bucket.courses || []).includes(courseId));
+    if (isScrapedCourse) {
+      console.log("[degreeviz][bucket-sync] scraped-course, skip additional assignment", { courseId, courseCode });
+      return;
+    }
     const coursePrefix = courseCode.split(" ")[0] || "";
     const matchingBuckets = requirements.buckets.filter((bucket) => String(bucket.category || "").toUpperCase() === normalized);
     console.log("[degreeviz][bucket-sync] start", {
@@ -167,10 +172,14 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
       group.innerHTML = `<summary>${program}</summary>`;
 
       const programAdditional = [];
+      const ruleAssignedAdditional = new Set();
+      const scrapedCourseIds = new Set();
       programBuckets.forEach((bucket) => {
         bucket.additional_courses = bucket.additional_courses || [];
+        (bucket.courses || []).forEach((id) => scrapedCourseIds.add(id));
         bucket.additional_courses.forEach((id) => {
           if (!programAdditional.includes(id)) programAdditional.push(id);
+          if (bucket.constraints_text) ruleAssignedAdditional.add(id);
         });
 
         const wrapper = document.createElement("details");
@@ -235,7 +244,9 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
       extraBucket.className = "optional-bucket";
       extraBucket.open = true;
       extraBucket.innerHTML = `<summary>Additional User Courses</summary>`;
-      programAdditional.forEach((courseId) => {
+      programAdditional
+        .filter((courseId) => !scrapedCourseIds.has(courseId) && !ruleAssignedAdditional.has(courseId))
+        .forEach((courseId) => {
         const c = detailsData[courseId];
         if (!c) return;
         const row = document.createElement("div");
