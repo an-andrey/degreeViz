@@ -186,6 +186,69 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
         wrapper.className = "optional-bucket";
         wrapper.open = true;
 
+        const actions = document.createElement("div");
+        actions.className = "optional-bucket-actions";
+        const editBtn = document.createElement("button");
+        editBtn.className = "secondary-btn";
+        editBtn.textContent = "Edit Bucket";
+        editBtn.onclick = () => {
+          const nextTitle = prompt("Bucket title", bucket.title || "") ?? bucket.title;
+          const nextMin = prompt("Min credits", String(bucket.min_credits ?? 0));
+          const nextMax = prompt("Max credits (blank if none)", bucket.max_credits == null ? "" : String(bucket.max_credits));
+          const nextRule = prompt("Rule / constraint text", bucket.constraints_text || "");
+          bucket.title = String(nextTitle || bucket.title || "").trim();
+          bucket.min_credits = Number(nextMin);
+          bucket.max_credits = String(nextMax || "").trim() === "" ? null : Number(nextMax);
+          bucket.constraints_text = String(nextRule || "").trim() || null;
+          markGraphDirty();
+          updateSheetView(detailsData, requirements);
+          render();
+        };
+        const addCourseBtn = document.createElement("button");
+        addCourseBtn.className = "secondary-btn";
+        addCourseBtn.textContent = "Add Course";
+        addCourseBtn.onclick = () => {
+          const codeInput = prompt("Course code to add to this bucket (e.g. COMP 551)", "");
+          const normalized = normalizedCode(codeInput || "");
+          if (!normalized) return;
+          const existingId = Object.keys(detailsData).find((id) => normalizedCode(detailsData[id]?.code || id) === normalized);
+          const courseId = existingId || normalized;
+          if (!detailsData[courseId]) {
+            detailsData[courseId] = {
+              code: normalized,
+              title: `${normalized} (User Added)`,
+              credits: "3",
+              semesters_offered: "Unknown",
+              category: bucket.category || "COMPLEMENTARY",
+              status: "Unassigned",
+              planned_semester: "Unassigned",
+              include_in_graph: false,
+            };
+          }
+          bucket.additional_courses = bucket.additional_courses || [];
+          if (!bucket.additional_courses.includes(courseId) && !(bucket.courses || []).includes(courseId)) {
+            bucket.additional_courses.push(courseId);
+          }
+          window.syncCourseBucketAssignment(courseId, bucket.category || "COMPLEMENTARY");
+          markGraphDirty();
+          updateSheetView(detailsData, requirements);
+          render();
+        };
+        const removeBucketBtn = document.createElement("button");
+        removeBucketBtn.className = "danger-btn";
+        removeBucketBtn.textContent = "Delete Bucket";
+        removeBucketBtn.onclick = () => {
+          if (!confirm(`Delete bucket '${bucket.title}'?`)) return;
+          const idx = requirements.buckets.findIndex((b) => b.id === bucket.id);
+          if (idx >= 0) requirements.buckets.splice(idx, 1);
+          markGraphDirty();
+          updateSheetView(detailsData, requirements);
+          render();
+        };
+        actions.appendChild(editBtn);
+        actions.appendChild(addCourseBtn);
+        actions.appendChild(removeBucketBtn);
+
         const inGraphCredits = (bucket.courses || []).reduce((sum, id) => {
           const c = detailsData[id];
           return c && c.include_in_graph ? sum + (parseFloat(c.credits) || 0) : sum;
@@ -211,6 +274,7 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
         const showRule = !!bucket.constraints_text && String(bucket.constraints_text).trim() !== String(bucket.title || "").trim();
 
         wrapper.innerHTML = `<summary>${bucket.title}</summary><div class="optional-bucket-meta">${bucket.category} • Added ${totalAddedCredits}/${requiredText} credits</div>${showRule ? `<div class="optional-rule-box">Rule: ${bucket.constraints_text}</div>` : ""}`;
+        wrapper.appendChild(actions);
 
         (bucket.courses || []).forEach((courseId) => {
           const c = detailsData[courseId];
@@ -296,6 +360,35 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
         extraBucket.appendChild(row);
       });
       group.appendChild(extraBucket);
+
+      const addBucketBtn = document.createElement("button");
+      addBucketBtn.className = "secondary-btn";
+      addBucketBtn.textContent = "+ New Bucket";
+      addBucketBtn.onclick = () => {
+        const title = prompt(`New bucket title for ${program}`, "New Bucket");
+        if (!title) return;
+        const category = (prompt("Category (CORE/COMPLEMENTARY/ELECTIVE)", "COMPLEMENTARY") || "COMPLEMENTARY").toUpperCase();
+        const minCredits = Number(prompt("Min credits", "0"));
+        const maxCreditsRaw = prompt("Max credits (blank if none)", "");
+        const maxCredits = String(maxCreditsRaw || "").trim() === "" ? null : Number(maxCreditsRaw);
+        const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "bucket";
+        const id = `${program.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${slug}-${Date.now()}`;
+        requirements.buckets.push({
+          id,
+          title: title.trim(),
+          category,
+          min_credits: Number.isFinite(minCredits) ? minCredits : 0,
+          max_credits: Number.isFinite(maxCredits) ? maxCredits : null,
+          courses: [],
+          additional_courses: [],
+          constraints_text: null,
+          program_name: program,
+        });
+        markGraphDirty();
+        updateSheetView(detailsData, requirements);
+        render();
+      };
+      group.appendChild(addBucketBtn);
 
       list.appendChild(group);
     });

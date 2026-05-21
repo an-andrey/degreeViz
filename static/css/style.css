@@ -1608,6 +1608,13 @@ button#scrapeButton:disabled {
   padding: 6px 0;
   border-top: 1px dashed var(--border-color);
 }
+
+.optional-bucket-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 8px 0 10px 0;
+}
 .optional-course-row:first-of-type {
   border-top: none;
 }
