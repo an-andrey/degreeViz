@@ -64,6 +64,10 @@ export function setupAddProgramButton(
               Object.assign(prereqsData, result.new_prereqs);
               if (result.new_requirements?.buckets) {
                 window.programRequirements = window.programRequirements || { buckets: [] };
+                const inferredProgramName = data.url_display || data.url || "Program";
+                result.new_requirements.buckets.forEach((bucket) => {
+                  if (!bucket.program_name) bucket.program_name = inferredProgramName;
+                });
                 window.programRequirements.buckets = [
                   ...(window.programRequirements.buckets || []),
                   ...result.new_requirements.buckets,
@@ -165,7 +169,8 @@ export function setupAddProgramButton(
               }
 
               markGraphDirty();
-              updateSheetView(detailsData);
+              updateSheetView(detailsData, window.programRequirements || {});
+              window.dispatchEvent(new Event("degreeviz:data-updated"));
               network.fit();
             } else {
               alert("Error importing program: " + result.message);

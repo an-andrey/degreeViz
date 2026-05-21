@@ -237,6 +237,31 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
           wrapper.appendChild(row);
         });
 
+        (bucket.additional_courses || []).forEach((courseId) => {
+          const c = detailsData[courseId];
+          if (!c) return;
+          const row = document.createElement("div");
+          row.className = "optional-course-row";
+          const isOnGraph = !!c.include_in_graph;
+          row.innerHTML = `<span><strong>${c.code || courseId}</strong> ${c.title} (${c.credits}) <em>(Added)</em></span>`;
+          const btn = document.createElement("button");
+          btn.textContent = isOnGraph ? "Remove" : "Add";
+          btn.className = isOnGraph ? "danger-btn" : "secondary-btn";
+          btn.onclick = () => {
+            if (isOnGraph) {
+              c.include_in_graph = false;
+              if (nodes.get(courseId)) nodes.remove(courseId);
+            } else {
+              renderCourse(network, nodes, edges, detailsData, prereqsData, courseId);
+            }
+            markGraphDirty();
+            updateSheetView(detailsData, requirements);
+            render();
+          };
+          row.appendChild(btn);
+          wrapper.appendChild(row);
+        });
+
         group.appendChild(wrapper);
       });
 
