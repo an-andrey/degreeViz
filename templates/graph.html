@@ -46,7 +46,14 @@
           <span>Hold <kbd>Shift</kbd> + Drag to multi-select</span>
         </div>
       </div>
-      <div id="courseNetwork"></div>
+      <div class="planner-layout">
+        <div id="courseNetwork"></div>
+        <aside id="optionalCourseShelf" class="optional-shelf">
+          <div class="optional-shelf-header"><h4 class="optional-shelf-title">Course Pool</h4></div>
+          <div id="optionalBucketList" class="optional-course-list"></div>
+        </aside>
+      </div>
+
 
       <div id="nodeInspector" class="node-inspector">
         <div class="inspector-header">
@@ -238,6 +245,8 @@
 <script type="text/javascript">
   const prereqsData = {{ prereqs|tojson }};
   const detailsData = {{ details|tojson }};
+  const programRequirements = {{ requirements|default({})|tojson }};
+  window.programRequirements = programRequirements;
   const serverScheduleId = {{ session.get('schedule_id') | tojson | safe }};
 
   // 1. PULL the requirements from the Flask session (defaults to 0 if brand new)

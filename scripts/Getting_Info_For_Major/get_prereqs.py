@@ -30,7 +30,7 @@ def get_prereq_list(major_name, major_courses_data):
                 contents=prompt
             )
         except Exception as e: 
-            return "There was an error with contacting Gemini"
+            return {}
 
         text_response = response.text.strip()
 
@@ -45,4 +45,26 @@ def get_prereq_list(major_name, major_courses_data):
         resolved_prereqs = json.loads(text_response.replace("'", '"'))
         return resolved_prereqs
     except Exception as e:
-        return f"Error: {e}\nResponse from Gemini: {response}"
+        return {}
+
+
+def parse_requirement_rules(major_name, rule_texts):
+    load_dotenv()
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+    client = genai.Client(api_key=GEMINI_API_KEY)
+    prompt = f"""
+    For McGill program '{major_name}', convert these plain-English degree rules into strict JSON array.
+    Output ONLY JSON. Schema per item: {{"rule_text": str, "allowed_prefixes": [str], "min_level": int|null, "exclude_courses": [str], "must_have_credits_at_level": {{"level": int, "credits": int}}|null}}
+    Rules:
+    {json.dumps(rule_texts)}
+    """
+    try:
+        resp = client.models.generate_content(model='gemini-2.5-flash-lite', contents=prompt)
+        txt = resp.text.strip()
+        if txt.startswith("```json"):
+            txt = txt[len("```json"):].strip()
+        if txt.endswith("```"):
+            txt = txt[:-3].strip()
+        return json.loads(txt)
+    except Exception:
+        return []
