@@ -65,6 +65,16 @@ def _looks_like_constraint(text: str) -> bool:
     t = text.lower()
     return ("credit" in t) and ("selected from" in t or "excluding" in t or "level or above" in t or "must be at the" in t)
 
+
+def _is_note_text(text: str) -> bool:
+    t = text.lower().strip()
+    return t.startswith("note:") or t.startswith("notes:") or t.startswith("n.b.")
+
+
+def _is_choice_text(text: str) -> bool:
+    t = text.lower().strip()
+    return t in {"one of:", "two of:", "three of:"} or t.endswith(" of:")
+
 def _credit_bounds(text: str) -> tuple[float, float | None]:
     text = _clean_text(text)
     range_match = CREDIT_RANGE_RE.search(text)
@@ -118,15 +128,23 @@ def extract_program_requirements(soup):
             text = _clean_text(element.get_text(" ", strip=True))
             if _is_footer_or_site_text(text):
                 continue
+            if _is_note_text(text):
+                continue
+
             if "selected from" in text.lower() and "credit" in text.lower():
                 pending_bucket_label = text
                 pending_constraint_text = ""
                 next_div = element.find_next_sibling()
                 while next_div and getattr(next_div, "name", None) is None:
                     next_div = next_div.find_next_sibling()
+                while next_div and next_div.name == "p" and _is_note_text(_clean_text(next_div.get_text(" ", strip=True))):
+                    next_div = next_div.find_next_sibling()
                 if not (next_div and next_div.name == "div" and "courselist-wrapper" in (next_div.get("class") or [])):
                     _flush_standalone_text_bucket(text, buckets, current_section_title)
                     pending_bucket_label = ""
+            elif _is_choice_text(text):
+                pending_bucket_label = text
+                pending_constraint_text = ""
 
             elif _looks_like_constraint(text):
                 pending_constraint_text = text
@@ -144,6 +162,9 @@ def extract_program_requirements(soup):
                 continue
 
             bucket_label = pending_bucket_label or current_section_title
+            if _is_choice_text(bucket_label):
+                choice_num = len([b for b in buckets if b.id.startswith(_slugify(current_section_title, "section"))]) + 1
+                bucket_label = f"{bucket_label[:-1]} (Option Group {choice_num})"
             pending_bucket_label = ""
 
             min_credits, max_credits = _credit_bounds(bucket_label)
