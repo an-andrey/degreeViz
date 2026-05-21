@@ -37,7 +37,8 @@ function parseConstraintHints(constraintText = "") {
   const text = String(constraintText || "").toUpperCase();
   const prefixes = Array.from(new Set((text.match(/\b[A-Z]{4}\b/g) || [])));
   const levelRegex = getConstraintRegex(constraintText);
-  return { prefixes, levelRegex };
+  const excludedCourses = Array.from(new Set((text.match(/\b[A-Z]{4}\s?\d{3}[A-Z0-9]?\b/g) || []))).map((c) => c.replace(/\s+/, " "));
+  return { prefixes, levelRegex, excludedCourses };
 }
 
 function renderCourse(network, nodes, edges, detailsData, prereqsData, courseId) {
@@ -88,22 +89,36 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
       category: normalized,
       matchingBucketCount: matchingBuckets.length,
     });
-    const targetBucket = matchingBuckets.find((bucket) => {
-      const { prefixes, levelRegex } = parseConstraintHints(bucket.constraints_text);
+    const candidateBuckets = matchingBuckets.map((bucket) => {
+      const { prefixes, levelRegex, excludedCourses } = parseConstraintHints(bucket.constraints_text);
+      const hasConstraint = !!bucket.constraints_text;
+      const excluded = excludedCourses.includes(courseCode);
       const prefixOk = !prefixes.length || prefixes.includes(coursePrefix);
       const levelOk = !levelRegex || levelRegex(courseCode);
+      const passes = !excluded && prefixOk && levelOk;
+      const score = [hasConstraint ? 1 : 0, prefixes.length ? 1 : 0, levelRegex ? 1 : 0].reduce((a, b) => a + b, 0);
       console.log("[degreeviz][bucket-sync] evaluate", {
         bucketId: bucket.id,
         title: bucket.title,
         prefixes,
+        excludedCourses,
+        excluded,
         coursePrefix,
         prefixOk,
         hasLevelRule: !!levelRegex,
         levelOk,
+        passes,
+        score,
         constraint: bucket.constraints_text,
       });
-      return prefixOk && levelOk;
-    }) || matchingBuckets[0];
+      return { bucket, passes, score, hasConstraint };
+    });
+
+    const passing = candidateBuckets.filter((c) => c.passes);
+    passing.sort((a, b) => b.score - a.score);
+    const targetBucket = (passing[0] && passing[0].bucket)
+      || (candidateBuckets.find((c) => !c.hasConstraint) || {}).bucket
+      || matchingBuckets[0];
     if (!targetBucket) return;
     targetBucket.additional_courses = targetBucket.additional_courses || [];
     if (!targetBucket.additional_courses.includes(courseId) && !(targetBucket.courses || []).includes(courseId)) {
