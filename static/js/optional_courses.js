@@ -65,6 +65,10 @@ function renderCourse(network, nodes, edges, detailsData, prereqsData, courseId)
   if (newEdges.length) edges.update(newEdges);
 }
 
+function normalizedCode(value = "") {
+  return String(value).toUpperCase().replace(/\s+/g, " ").trim();
+}
+
 export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, prereqsData, markGraphDirty) {
   const root = document.getElementById("optionalCourseShelf");
   const list = document.getElementById("optionalBucketList");
@@ -80,7 +84,7 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
       bucket.additional_courses = (bucket.additional_courses || []).filter((id) => id !== courseId);
     });
     const course = detailsData[courseId] || {};
-    const courseCode = String(course.code || courseId || "").toUpperCase();
+    const courseCode = normalizedCode(course.code || courseId || "");
     const coursePrefix = courseCode.split(" ")[0] || "";
     const matchingBuckets = requirements.buckets.filter((bucket) => String(bucket.category || "").toUpperCase() === normalized);
     console.log("[degreeviz][bucket-sync] start", {
@@ -193,9 +197,11 @@ export function setupOptionalCoursesShelf(network, nodes, edges, detailsData, pr
             additionalInGraphCredits,
           });
         }
+        const totalAddedCredits = inGraphCredits + additionalInGraphCredits;
         const requiredText = (Number(bucket.max_credits || 0) && Number(bucket.max_credits) !== Number(bucket.min_credits)) ? `${bucket.min_credits}-${bucket.max_credits}` : `${bucket.min_credits}`;
+        const showRule = !!bucket.constraints_text && String(bucket.constraints_text).trim() !== String(bucket.title || "").trim();
 
-        wrapper.innerHTML = `<summary>${bucket.title}</summary><div class="optional-bucket-meta">${bucket.category} • Added ${inGraphCredits}/${requiredText} credits${additionalInGraphCredits ? ` • Additional counted: ${additionalInGraphCredits}` : ""}</div>${bucket.constraints_text ? `<div class="optional-rule-box">Rule: ${bucket.constraints_text}</div>` : ""}`;
+        wrapper.innerHTML = `<summary>${bucket.title}</summary><div class="optional-bucket-meta">${bucket.category} • Added ${totalAddedCredits}/${requiredText} credits</div>${showRule ? `<div class="optional-rule-box">Rule: ${bucket.constraints_text}</div>` : ""}`;
 
         (bucket.courses || []).forEach((courseId) => {
           const c = detailsData[courseId];

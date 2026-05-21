@@ -4,6 +4,9 @@ import { generateNodeLabel, getStatusColor } from "./node_utils.js";
 import { updateSheetView } from "./sheet_view.js";
 
 export function getVisNetworkOptions(nodes, edges) {
+  function normalizedCode(value = "") {
+    return String(value).toUpperCase().replace(/\s+/g, " ").trim();
+  }
   window.coursePoolStore = window.coursePoolStore || {};
   Object.keys(detailsData || {}).forEach((id) => {
     const d = detailsData[id] || {};
@@ -15,13 +18,13 @@ export function getVisNetworkOptions(nodes, edges) {
     }
   });
 
-  function addNodeFromDetails(courseId, fallbackX = 0, fallbackY = 0) {
+  function addNodeFromDetails(courseId, fallbackX = 0, fallbackY = 0, forceFallbackPos = false) {
     const d = detailsData[courseId];
     if (!d || nodes.get(courseId)) return;
     nodes.add({
       id: courseId,
-      x: d.x ?? fallbackX,
-      y: d.y ?? fallbackY,
+      x: forceFallbackPos ? fallbackX : (d.x ?? fallbackX),
+      y: forceFallbackPos ? fallbackY : (d.y ?? fallbackY),
       label: generateNodeLabel(
         d.code || courseId,
         d.title,
@@ -175,9 +178,10 @@ export function getVisNetworkOptions(nodes, edges) {
             if (!data.title || !String(data.title).trim()) {
               data.title = `${data.code.toUpperCase()} (Custom Course)`;
             }
+            const requestedCode = normalizedCode(data.code);
             const existingEntry = Object.entries(detailsData).find(([key, course]) => {
-              const existingCode = course.code || key;
-              return existingCode.toUpperCase() === data.code.toUpperCase();
+              const existingCode = normalizedCode(course.code || key);
+              return existingCode === requestedCode;
             });
 
             if (existingEntry) {
@@ -186,7 +190,7 @@ export function getVisNetworkOptions(nodes, edges) {
                 existingCourse.include_in_graph = true;
                 existingCourse.category = data.category || existingCourse.category;
                 addCourseToAdditionalBucket(existingId, existingCourse.category);
-                addNodeFromDetails(existingId, nodeData.x, nodeData.y);
+                addNodeFromDetails(existingId, nodeData.x, nodeData.y, true);
                 ensurePrereqNodes(existingId, nodeData.x, nodeData.y);
                 connectCoursePrereqEdges(existingId);
                 markGraphDirty();
@@ -196,7 +200,7 @@ export function getVisNetworkOptions(nodes, edges) {
               }
 
               alert(
-                `Error: The course ${data.code.toUpperCase()} is already on your graph!`,
+                `Error: The course ${requestedCode} is already on your graph!`,
               );
               callback(null);
               return false; // Tells ui_handler to KEEP THE MODAL OPEN
@@ -211,7 +215,7 @@ export function getVisNetworkOptions(nodes, edges) {
               data.status,
             );
 
-            const canonicalId = data.code.toUpperCase();
+            const canonicalId = requestedCode;
             const newNode = {
               id: canonicalId,
               x: nodeData.x,
