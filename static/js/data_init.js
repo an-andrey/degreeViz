@@ -104,6 +104,7 @@ export function initializeNodes(detailsData, prereqsData) {
   // 2. Build the nodes using the newly calculated X and Y coordinates
   Object.keys(detailsData).forEach((nodeId) => {
     const course = detailsData[nodeId];
+    if (course.include_in_graph === false) return;
 
     nodesArray.push({
       id: nodeId,

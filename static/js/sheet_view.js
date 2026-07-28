@@ -1,4 +1,4 @@
-export function updateSheetView(detailsData) {
+export function updateSheetView(detailsData, requirementsData = window.programRequirements || {}) {
   let stats = {
     CORE: { taken: 0 },
     COMPLEMENTARY: { taken: 0 },
@@ -65,6 +65,7 @@ export function updateSheetView(detailsData) {
     row.innerHTML = `<td><strong>${term}</strong></td><td style="${load >= 18 ? "color: var(--error-text); font-weight: bold;" : ""}">${load}</td>`;
     tbody.appendChild(row);
   });
+
 }
 
 export function setupSheetViewListeners(detailsData, updateCb, markDirtyCb) {

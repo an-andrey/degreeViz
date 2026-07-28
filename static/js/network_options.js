@@ -4,6 +4,68 @@ import { generateNodeLabel, getStatusColor } from "./node_utils.js";
 import { updateSheetView } from "./sheet_view.js";
 
 export function getVisNetworkOptions(nodes, edges) {
+  function normalizedCode(value = "") {
+    return String(value).toUpperCase().replace(/\s+/g, " ").trim();
+  }
+  window.coursePoolStore = window.coursePoolStore || {};
+  Object.keys(detailsData || {}).forEach((id) => {
+    const d = detailsData[id] || {};
+    if (d.include_in_graph === false) {
+      window.coursePoolStore[id] = {
+        detail: d,
+        prereqs: Array.isArray(prereqsData[id]) ? [...prereqsData[id]] : [],
+      };
+    }
+  });
+
+  function addNodeFromDetails(courseId, fallbackX = 0, fallbackY = 0, forceFallbackPos = false) {
+    const d = detailsData[courseId];
+    if (!d || nodes.get(courseId)) return;
+    nodes.add({
+      id: courseId,
+      x: forceFallbackPos ? fallbackX : (d.x ?? fallbackX),
+      y: forceFallbackPos ? fallbackY : (d.y ?? fallbackY),
+      label: generateNodeLabel(
+        d.code || courseId,
+        d.title,
+        d.credits,
+        d.semesters_offered,
+        d.category,
+        d.planned_semester,
+        d.status,
+      ),
+      color: getStatusColor(d.status || "Unassigned"),
+    });
+    d.include_in_graph = true;
+  }
+
+  function ensurePrereqNodes(courseId, originX = 0, originY = 0) {
+    const prereqs = Array.isArray(prereqsData[courseId]) ? prereqsData[courseId] : [];
+    prereqs.forEach((preId, idx) => {
+      if (detailsData[preId] && !nodes.get(preId)) {
+        addNodeFromDetails(preId, originX - 220, originY + idx * 120);
+      }
+    });
+  }
+
+  function connectCoursePrereqEdges(courseId) {
+    const newEdges = [];
+    (prereqsData[courseId] || []).forEach((fromNode) => {
+      if (nodes.get(fromNode)) newEdges.push({ from: fromNode, to: courseId, arrows: "to" });
+    });
+    Object.entries(prereqsData).forEach(([toNode, reqs]) => {
+      if (Array.isArray(reqs) && reqs.includes(courseId) && nodes.get(toNode)) {
+        newEdges.push({ from: courseId, to: toNode, arrows: "to" });
+      }
+    });
+    if (newEdges.length) edges.update(newEdges);
+  }
+
+  function addCourseToAdditionalBucket(courseId, category) {
+    if (typeof window.syncCourseBucketAssignment === "function") {
+      window.syncCourseBucketAssignment(courseId, category);
+    }
+  }
   return {
     locale: "en",
     locales: {
@@ -109,22 +171,36 @@ export function getVisNetworkOptions(nodes, edges) {
             },
           ],
           onSubmit: (data) => {
-            if (!data.title || !data.code) {
+            if (!data.code) {
               callback(null);
               return false; // Keep modal open if empty
             }
+            if (!data.title || !String(data.title).trim()) {
+              data.title = `${data.code.toUpperCase()} (Custom Course)`;
+            }
+            const requestedCode = normalizedCode(data.code);
+            const existingEntry = Object.entries(detailsData).find(([key, course]) => {
+              const existingCode = normalizedCode(course.code || key);
+              return existingCode === requestedCode;
+            });
 
-            // UNIQUE COURSE CHECK: Safely checks older nodes that might lack a .code property
-            const codeExists = Object.entries(detailsData).some(
-              ([key, course]) => {
-                const existingCode = course.code || key; // Fallback to the dictionary key for older nodes
-                return existingCode.toUpperCase() === data.code.toUpperCase();
-              },
-            );
+            if (existingEntry) {
+              const [existingId, existingCourse] = existingEntry;
+              if (existingCourse.include_in_graph === false) {
+                existingCourse.include_in_graph = true;
+                existingCourse.category = data.category || existingCourse.category;
+                addCourseToAdditionalBucket(existingId, existingCourse.category);
+                addNodeFromDetails(existingId, nodeData.x, nodeData.y, true);
+                ensurePrereqNodes(existingId, nodeData.x, nodeData.y);
+                connectCoursePrereqEdges(existingId);
+                markGraphDirty();
+                callback(null);
+                window.dispatchEvent(new Event("degreeviz:data-updated"));
+                return true;
+              }
 
-            if (codeExists) {
               alert(
-                `Error: The course ${data.code.toUpperCase()} is already on your graph!`,
+                `Error: The course ${requestedCode} is already on your graph!`,
               );
               callback(null);
               return false; // Tells ui_handler to KEEP THE MODAL OPEN
@@ -139,8 +215,9 @@ export function getVisNetworkOptions(nodes, edges) {
               data.status,
             );
 
+            const canonicalId = requestedCode;
             const newNode = {
-              id: nodeData.id,
+              id: canonicalId,
               x: nodeData.x,
               y: nodeData.y,
               code: data.code.toUpperCase(),
@@ -154,8 +231,10 @@ export function getVisNetworkOptions(nodes, edges) {
 
             callback(null);
             nodes.add(newNode);
+            ensurePrereqNodes(canonicalId, nodeData.x, nodeData.y);
+            connectCoursePrereqEdges(canonicalId);
 
-            detailsData[newNode.id] = {
+            detailsData[canonicalId] = {
               code: newNode.code,
               title: data.title,
               credits: data.credits,
@@ -166,12 +245,20 @@ export function getVisNetworkOptions(nodes, edges) {
               color: newNode.color,
               x: newNode.x,
               y: newNode.y,
+              include_in_graph: true,
             };
-            prereqsData[newNode.id] = [];
+            addCourseToAdditionalBucket(canonicalId, data.category);
+            if (!Array.isArray(prereqsData[canonicalId])) {
+              prereqsData[canonicalId] = [];
+            }
+            window.coursePoolStore[canonicalId] = {
+              detail: detailsData[canonicalId],
+              prereqs: [...prereqsData[canonicalId]],
+            };
 
             const queryParams = new URLSearchParams({
               request: "add node",
-              node_id: newNode.id,
+              node_id: canonicalId,
               code: newNode.code,
               node_title: data.title,
               credits: data.credits,
@@ -184,6 +271,8 @@ export function getVisNetworkOptions(nodes, edges) {
             }).then((response) => {
               if (response.ok) markGraphDirty();
             });
+            markGraphDirty();
+            window.dispatchEvent(new Event("degreeviz:data-updated"));
 
             return true; // Success! Close the modal.
           },
