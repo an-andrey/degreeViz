@@ -62,6 +62,17 @@ export function setupAddProgramButton(
               // 2. Update local memory
               Object.assign(detailsData, result.new_details);
               Object.assign(prereqsData, result.new_prereqs);
+              if (result.new_requirements?.buckets) {
+                window.programRequirements = window.programRequirements || { buckets: [] };
+                const inferredProgramName = data.url_display || data.url || "Program";
+                result.new_requirements.buckets.forEach((bucket) => {
+                  if (!bucket.program_name) bucket.program_name = inferredProgramName;
+                });
+                window.programRequirements.buckets = [
+                  ...(window.programRequirements.buckets || []),
+                  ...result.new_requirements.buckets,
+                ];
+              }
 
               // 3. Grid Placement Algorithm
               let maxX = -Infinity;
@@ -83,8 +94,8 @@ export function setupAddProgramButton(
               let currentY = startY;
 
               Object.keys(result.new_details).forEach((code, index) => {
-                if (!nodes.get(code)) {
-                  const d = result.new_details[code];
+                const d = result.new_details[code];
+                if (!nodes.get(code) && (d.include_in_graph !== false)) {
                   const xOffset = currentX + Math.floor(index / 5) * 200;
                   const yOffset = currentY + (index % 5) * 150;
 
@@ -158,7 +169,8 @@ export function setupAddProgramButton(
               }
 
               markGraphDirty();
-              updateSheetView(detailsData);
+              updateSheetView(detailsData, window.programRequirements || {});
+              window.dispatchEvent(new Event("degreeviz:data-updated"));
               network.fit();
             } else {
               alert("Error importing program: " + result.message);

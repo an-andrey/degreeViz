@@ -42,6 +42,38 @@ def inject_supabase_config():
         supabase_key=SUPABASE_KEY # important to pass the key and not service_role_key
     )
 
+
+
+def rebuild_requirements_from_details(details):
+    buckets = {}
+    for code, course in (details or {}).items():
+        bucket_id = course.get("requirement_bucket")
+        if not bucket_id:
+            continue
+        bucket = buckets.setdefault(bucket_id, {
+            "id": bucket_id,
+            "title": course.get("requirement_bucket_title") or bucket_id,
+            "category": course.get("category", "CORE"),
+            "min_credits": course.get("requirement_min_credits", 0),
+            "max_credits": course.get("requirement_max_credits"),
+            "courses": [],
+        })
+        bucket["courses"].append(code)
+    return {"buckets": list(buckets.values())}
+
+
+def merge_program_requirements(current, incoming):
+    merged = dict(current or {})
+    existing_buckets = {bucket.get("id"): bucket for bucket in merged.get("buckets", [])}
+    for bucket in (incoming or {}).get("buckets", []):
+        bucket_id = bucket.get("id")
+        if not bucket_id or bucket_id in existing_buckets:
+            continue
+        existing_buckets[bucket_id] = bucket
+    merged["buckets"] = list(existing_buckets.values())
+    merged["course_to_bucket"] = {**(current or {}).get("course_to_bucket", {}), **(incoming or {}).get("course_to_bucket", {})}
+    return merged
+
 courses_info = {}
 with open('static/json/courses_info.json', 'r', encoding='utf-8') as f:
     courses_info = json.load(f)
@@ -89,6 +121,7 @@ def scrape_form():
                 #Saving to session
                 session['prereqs_data'] = prereqs_data
                 session['details_data'] = details_data
+                session['program_requirements'] = rebuild_requirements_from_details(details_data)
                 session['graph_data_available'] = True
 
                 return redirect("graph")
@@ -97,11 +130,23 @@ def scrape_form():
     major = request.args.get("programSearch")
     
     if action == "Visualize Program": 
-        courses_prereqs_data, processed_details_data = get_information_for_major.process_program_data(url, major) #scrape the major's site and grab all info
+        program_data = get_information_for_major.process_program_data(url, major)
+        if not isinstance(program_data, tuple):
+            return render_template('scrape_form.html', error="Unable to scrape that program. Please try again later.")
+
+        if len(program_data) == 2:
+            courses_prereqs_data, processed_details_data = program_data
+            requirements_data = {}
+        else:
+            courses_prereqs_data, processed_details_data, requirements_data = program_data #scrape the major's site and grab all info
+        if courses_prereqs_data is None or processed_details_data is None:
+            return render_template('scrape_form.html', error="Unable to scrape that program. Please try again later.")
         
         #Saving the variable to session
         session['prereqs_data'] = courses_prereqs_data
         session['details_data'] = processed_details_data
+        session['program_requirements'] = requirements_data or {}
+        session['credit_requirements'] = (requirements_data or {}).get('credit_requirements', {'core': 0, 'comp': 0, 'elec': 0})
         session['graph_data_available'] = True
 
         return redirect("graph")
@@ -113,6 +158,7 @@ def scrape_form():
             session.pop('prereqs_data', None)
             session.pop('details_data', None)
             session.pop('graph_data_available', None)
+            session.pop('program_requirements', None)
             # This is an initial GET request to the form
             return render_template('scrape_form.html')
         else:
@@ -127,7 +173,8 @@ def graph():
         prereqs = session.get('prereqs_data', {})
         details = session.get('details_data', {})
         logging.log_entry(request, "displaying graph")
-        return render_template('graph.html', prereqs=prereqs, details=details)
+        requirements = session.get('program_requirements') or rebuild_requirements_from_details(details)
+        return render_template('graph.html', prereqs=prereqs, details=details, requirements=requirements)
     else:
         # If no data, redirect back to home page
         return redirect(url_for('scrape_form'))
@@ -151,7 +198,14 @@ def add_program_to_graph():
         logging.log_entry(request, f"adding program {new_program_name} (url: {new_program_url}) to graph")    
 
         # Fetch and process data for the new program
-        new_prereqs, new_details = get_information_for_major.process_program_data(new_program_url, new_program_name)
+        new_program_data = get_information_for_major.process_program_data(new_program_url, new_program_name)
+        if len(new_program_data) == 2:
+            new_prereqs, new_details = new_program_data
+            new_requirements = {}
+        else:
+            new_prereqs, new_details, new_requirements = new_program_data
+        if new_prereqs is None or new_details is None:
+            raise ValueError("Unable to scrape that program.")
 
         # Retrieve current graph data from session
         current_prereqs = session.get('prereqs_data', {})
@@ -174,6 +228,7 @@ def add_program_to_graph():
 
         session['details_data'].update(new_details)
         session['prereqs_data'].update(new_prereqs)
+        session['program_requirements'] = merge_program_requirements(session.get('program_requirements', {}), new_requirements or {})
         session['graph_data_available'] = True
 
         # NEW: If JavaScript asked for this, send the raw JSON data back!
@@ -181,7 +236,8 @@ def add_program_to_graph():
             return jsonify({
                 "status": "success", 
                 "new_details": new_details, 
-                "new_prereqs": new_prereqs
+                "new_prereqs": new_prereqs,
+                "new_requirements": new_requirements or {}
             })
 
         return redirect(url_for('graph'))
@@ -394,6 +450,7 @@ def load_graph():
             # Load the data into the Flask session
             session['prereqs_data'] = graph.get('prereqs_data', {})
             session['details_data'] = graph.get('details_data', {})
+            session['program_requirements'] = rebuild_requirements_from_details(session['details_data'])
             session['schedule_id'] = graph.get('id')
             session['graph_data_available'] = True
             

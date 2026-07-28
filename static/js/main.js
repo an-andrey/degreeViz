@@ -13,6 +13,7 @@ import { setupSheetViewListeners, updateSheetView } from "./sheet_view.js";
 import { setupSidebar } from "./sidebar.js";
 import { generateNodeLabel, getStatusColor } from "./node_utils.js";
 import { updateGpaTracker } from "./gpa_tracker.js";
+import { setupOptionalCoursesShelf } from "./optional_courses.js";
 
 document.addEventListener("DOMContentLoaded", function () {
   if (
@@ -101,6 +102,27 @@ document.addEventListener("DOMContentLoaded", function () {
     saveGraphState,
     markGraphDirty,
   );
+  setupOptionalCoursesShelf(network, nodes, edges, detailsData, prereqsData, markGraphDirty);
+
+  const openOptionalShelfBtn = document.getElementById("openOptionalShelfBtn");
+  const optionalShelf = document.getElementById("optionalCourseShelf");
+  const plannerLayout = document.querySelector(".planner-layout");
+  if (openOptionalShelfBtn && optionalShelf && plannerLayout) {
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "secondary-btn";
+    closeBtn.textContent = "Hide";
+    closeBtn.onclick = () => {
+      plannerLayout.classList.add("shelf-hidden");
+      openOptionalShelfBtn.style.display = "inline-block";
+    };
+    const header = optionalShelf.querySelector(".optional-shelf-header");
+    if (header) header.appendChild(closeBtn);
+
+    openOptionalShelfBtn.addEventListener("click", () => {
+      plannerLayout.classList.remove("shelf-hidden");
+      openOptionalShelfBtn.style.display = "none";
+    });
+  }
 
   // Core Network Events
   network.on("click", function (params) {
@@ -122,6 +144,7 @@ document.addEventListener("DOMContentLoaded", function () {
       performWithoutHistory(() => nodes.update(updates));
       saveGraphState();
       markGraphDirty();
+      notifyDataUpdated();
     }
   });
 
@@ -131,3 +154,6 @@ document.addEventListener("DOMContentLoaded", function () {
     updateGpaTracker(detailsData);
   }, 500);
 });
+
+
+function notifyDataUpdated(){ window.dispatchEvent(new Event("degreeviz:data-updated")); }
