@@ -6,12 +6,12 @@
     
     <title>{% block title %}McGill Degree Planner & Course Visualizer | DegreeViz{% endblock %}</title>
     <meta name="title" content="McGill Degree Planner & Course Visualizer | DegreeViz">
-    <meta name="description" content="The ultimate interactive McGill degree planner. Search your major, visualize prerequisites, map out your courses, and plan your graduation at McGill University effortlessly.">
-    <meta name="keywords" content="mcgill degree planner, mcgill course visualizer, mcgill prerequisites, mcgill university, degreeviz, mcgill schedule maker, mcgill graduation">
+    <meta name="description" content="The ultimate interactive McGill degree planner. Search your program, visualize prerequisites, map out your courses, and plan your graduation at McGill University effortlessly.">
+    <meta name="keywords" content="mcgill degree planner, mcgill course visualizer, mcgill prerequisites, mcgill university, degreeviz, mcgill plan maker, mcgill graduation">
     
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://www.degreeviz.com/"> <meta property="og:title" content="McGill Degree Planner & Course Visualizer | DegreeViz">
-    <meta property="og:description" content="The ultimate interactive McGill degree planner. Search your major, visualize prerequisites, and map out your courses at McGill University effortlessly.">
+    <meta property="og:description" content="The ultimate interactive McGill degree planner. Search your program, visualize prerequisites, and map out your courses at McGill University effortlessly.">
     <link
       rel="icon"
       href="{{ url_for('static', filename='favicon.png') }}"
@@ -60,7 +60,7 @@
             </svg>
           </button>
           <div id="dropdownContent" class="dropdown-content">
-            <a href="{{url_for('saved_graphs')}}" id="viewGraphsBtn">View Saved Graphs</a>
+            <a href="{{url_for('saved_plans')}}" id="viewGraphsBtn">View Saved Plans</a>
             <div class="dropdown-divider"></div>
             <button id="logoutActionBtn" class="dropdown-item-btn">
               Log Out
@@ -83,7 +83,7 @@
         to ensure correct information.
       </p>
 
-      <p style="margin-top: 10px;">
+      <p class="footer-links">
         <a href="{{ url_for('terms_of_service') }}">Terms of Service & Privacy Policy</a>
       </p>
     </footer>
@@ -106,9 +106,9 @@
           </div>
 
           <div class="input-group">
-            <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div class="label-row">
               <label for="passwordInput">Password</label>
-              <button type="button" id="forgotPasswordBtn" class="text-link" style="font-size: 0.85em; margin: 0;">Forgot Passoword?</button>
+              <button type="button" id="forgotPasswordBtn" class="text-link compact-text-link">Forgot Password?</button>
             </div>
             <input
               type="password"
@@ -151,17 +151,17 @@
 
     <!-- Generic Custom Prompt Modal -->
     <div id="customPromptModal" class="modal-overlay">
-      <div class="modal-content auth-card form-card" style="max-width: 450px;">
+      <div class="modal-content auth-card form-card prompt-card">
         <span class="close-modal" id="closePromptModal">&times;</span>
-        <h3 id="promptTitle" style="text-align: center; margin-bottom: 20px; border-bottom: none; padding-bottom: 0; margin-top: 5px;">Prompt Title</h3>
+        <h3 id="promptTitle" class="prompt-title">Prompt Title</h3>
         
         <form id="customPromptForm" onsubmit="event.preventDefault();">
           <div id="promptFieldsContainer">
             <!-- Dynamic input fields get injected here by JavaScript -->
           </div>
           
-          <div class="card-action" style="display: flex; gap: 10px; margin-top: 25px;">
-            <button type="submit" id="submitPromptBtn" style="flex: 1; margin: 0; background-color: var(--mcgill-red); color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">Submit</button>
+          <div class="card-action prompt-actions">
+            <button type="submit" id="submitPromptBtn" class="primary-btn prompt-submit-btn">Submit</button>
           </div>
         </form>
       </div>

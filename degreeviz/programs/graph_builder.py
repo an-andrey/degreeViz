@@ -1,43 +1,61 @@
-from scripts.Getting_Info_For_Major import get_courses_of_major, get_prereqs, program_requirements
-from scripts import utils
 import json
+import logging
 import re
+from pathlib import Path
 
-#Given the link from provided from the programs.json file, it grabs all the courses of the major, and compiles all the info for each course.
+from degreeviz.errors import ProgramScrapeError
+from degreeviz.programs import catalogue_page, llm_prerequisites, requirements
 
-courses_info = {}
-honours_matches = {}
+COURSES_INFO_PATH = Path("static/json/courses_info.json")
+HONOURS_MATCHES_PATH = Path("static/json/honours_matches.json")
 
-with open('static/json/courses_info.json', 'r', encoding='utf-8') as f:
+courses_info: dict = {}
+honours_matches: dict = {}
+logger = logging.getLogger("degreeviz")
+
+with COURSES_INFO_PATH.open("r", encoding="utf-8") as f:
     courses_info = json.load(f)
 
-with open('static/json/honours_matches.json', 'r', encoding='utf-8') as f:
+with HONOURS_MATCHES_PATH.open("r", encoding="utf-8") as f:
     honours_matches = json.load(f)
 
-def process_program_data(program_url, major):
+
+def build_program_graph(program_url: str, program_name: str | None):
+    """Build prerequisite, detail, and requirement data for one McGill program.
+
+    A McGill "program" may be a major, minor, honours program, concentration,
+    or any other catalogue plan. The returned tuple is the server-side source
+    for the interactive browser graph.
+
+    Raises:
+        ProgramScrapeError: if the program page cannot be fetched or parsed.
+    """
     try:
-        program_soup = get_courses_of_major.get_program_soup(program_url)
-        course_codes = get_courses_of_major.get_program_codes(program_url, soup=program_soup)
-        requirements_data = program_requirements.extract_program_requirements(program_soup)
-        major_slug = re.sub(r"[^a-z0-9]+", "-", (major or "program").lower()).strip("-") or "program"
+        program_soup = catalogue_page.fetch_program_soup(program_url)
+        course_codes = catalogue_page.extract_program_course_codes(program_url, soup=program_soup)
+        requirements_data = requirements.extract_program_requirements(program_soup)
+        program_slug = re.sub(r"[^a-z0-9]+", "-", (program_name or "program").lower()).strip("-") or "program"
         for idx, bucket in enumerate(requirements_data.get("buckets", []), start=1):
-            bucket["program_name"] = major
+            bucket["program_name"] = program_name
             bucket_id = bucket.get("id") or f"bucket-{idx}"
-            if not str(bucket_id).startswith(f"{major_slug}-"):
-                bucket["id"] = f"{major_slug}-{bucket_id}"
+            if not str(bucket_id).startswith(f"{program_slug}-"):
+                bucket["id"] = f"{program_slug}-{bucket_id}"
 
         requirements_data["course_to_bucket"] = {
-            code: (f"{major_slug}-{bucket_id}" if bucket_id and not str(bucket_id).startswith(f"{major_slug}-") else bucket_id)
+            code: (f"{program_slug}-{bucket_id}" if bucket_id and not str(bucket_id).startswith(f"{program_slug}-") else bucket_id)
             for code, bucket_id in requirements_data.get("course_to_bucket", {}).items()
         }
-        rule_texts=[b.get("constraints_text") for b in requirements_data.get("buckets",[]) if b.get("constraints_text")]
-        requirements_data["parsed_rules"] = get_prereqs.parse_requirement_rules(major, rule_texts) if rule_texts else []
+        rule_texts = [b.get("constraints_text") for b in requirements_data.get("buckets", []) if b.get("constraints_text")]
+        requirements_data["parsed_rules"] = llm_prerequisites.parse_requirement_rules(program_name, rule_texts) if rule_texts else []
         if not course_codes:
-            print(f"No course codes found for URL: {program_url}")
-            return None, None, None
+            raise ProgramScrapeError(
+                f"No course codes found for URL: {program_url}",
+                user_message="Unable to find courses for that program.",
+                details={"program": program_name, "url": program_url},
+            )
 
         course_details_data = {}
-        gemini_data = {}
+        llm_course_data = {}
 
         for code in course_codes:
             if code in courses_info:
@@ -46,33 +64,33 @@ def process_program_data(program_url, major):
                     "credits": courses_info[code]["Credits"],
                     "semesters_offered": courses_info[code]["Terms_Offered"],
                 }
-                gemini_data[code] = {
+                llm_course_data[code] = {
                     "Title": courses_info[code]["Title"],
                     "Prerequisites": courses_info[code]["Prerequisites"],
                     "Corequisites": courses_info[code]["Corequisites"],
                 }
             else:
-                print(f"Warning: Course code {code} from program {major} not found in global courses_info.json")
-                fallback_metadata = get_courses_of_major.get_course_metadata_from_program_page(code, program_soup)
+                logger.warning("Course code %s from program %s not found in courses_info.json", code, program_name)
+                fallback_metadata = catalogue_page.extract_course_metadata_from_program_page(code, program_soup)
                 course_details_data[code] = fallback_metadata or {
                     "title": f"{code} (Details not found)",
                     "credits": "N/A",
                     "semesters_offered": "Unknown",
                 }
 
-        # Querying Gemini to get pre-req list
-        # Ensure gemini_data is not empty before calling get_prereq_list
+        # Query Gemini for a simplified prerequisite map. Static course data is
+        # still the source of truth for titles/credits/terms.
         courses_prereqs_data = {}
-        if gemini_data:
-            courses_prereqs_data = get_prereqs.get_prereq_list(major, gemini_data)
+        if llm_course_data:
+            courses_prereqs_data = llm_prerequisites.build_prerequisite_map(program_name, llm_course_data)
             if not isinstance(courses_prereqs_data, dict):
-                print(f"Warning: Gemini prereq response was not a dict for program {major}. Got type={type(courses_prereqs_data).__name__}")
+                logger.warning("Gemini prereq response for %s was %s, expected dict", program_name, type(courses_prereqs_data).__name__)
                 courses_prereqs_data = {}
         else:
-            print(f"No data prepared for Gemini for program: {major}")
+            logger.warning("No Gemini prereq data prepared for program %s", program_name)
 
 
-        #filling in everything that's missing, and adding color field
+        # Fill in any metadata that downstream graph views expect.
         course_details_full = {}
         for code, details in course_details_data.items():
             default_detail = {"title": "Unknown Title", "credits": "N/A", "semesters_offered": "Unknown"}
@@ -82,15 +100,17 @@ def process_program_data(program_url, major):
                 (bucket for bucket in requirements_data.get("buckets", []) if bucket.get("id") == bucket_id),
                 None,
             )
+            category = "CORE" if (bucket and bucket.get("category") == "CORE") else "COMPLEMENTARY"
             course_details_full[code] = {
                 **actual_details,
-                "category": "CORE" if (bucket and bucket.get("category") == "CORE") else "COMPLEMENTARY",
+                "category": category,
                 "requirement_bucket": bucket_id,
                 "requirement_bucket_title": bucket.get("title") if bucket else None,
                 "requirement_min_credits": bucket.get("min_credits") if bucket else 0,
                 "requirement_max_credits": bucket.get("max_credits") if bucket else None,
                 "include_in_graph": True if (bucket and bucket.get("category") == "CORE") else False,
-                "color": utils.parse_semester_to_color(actual_details.get("semesters_offered", ""))
+                "status": "TO TAKE" if category == "CORE" else "Unassigned",
+                "planned_semester": "Unassigned",
             }
 
         # Ensure all courses that Gemini gave prereqs to are actually courses to take
@@ -102,16 +122,15 @@ def process_program_data(program_url, major):
                             "title": f"{courses_info[course_code_prereq]['Title']} (Prereq)",
                             "credits": courses_info[course_code_prereq]["Credits"],
                             "semesters_offered": courses_info[course_code_prereq]["Terms_Offered"],
-                            "color": "LightSteelBlue"
                     }
                 else:
-                    course_details_full[course_code_prereq] = {"title": "Details Not Found", "credits": "N/A", "semesters_offered": "Unknown", "color": "LightSteelBlue"}
+                    course_details_full[course_code_prereq] = {"title": "Details Not Found", "credits": "N/A", "semesters_offered": "Unknown"}
 
             #if in an honours program, swapping all regular prereqs to the honours one.
             for i in range(len(courses_prereqs_data[course_code_prereq])):
                 prereq_code = courses_prereqs_data[course_code_prereq][i]
 
-                if major[:7] == "Honours" and prereq_code in honours_matches:
+                if (program_name or "").startswith("Honours") and prereq_code in honours_matches:
                     courses_prereqs_data[course_code_prereq][i] = honours_matches[prereq_code]
                     
 
@@ -123,13 +142,16 @@ def process_program_data(program_url, major):
                             "title": f"{courses_info[prereq_item]['Title']} (Prereq)",
                             "credits": courses_info[prereq_item]["Credits"],
                             "semesters_offered": courses_info[prereq_item]["Terms_Offered"],
-                            "color": "LightSteelBlue"
                         }
                     else:
-                        course_details_full[prereq_code] = {"title": "Details Not Found (Prereq)", "credits": "N/A", "semesters_offered": "Unknown", "color": "LightSteelBlue"}
+                        course_details_full[prereq_code] = {"title": "Details Not Found (Prereq)", "credits": "N/A", "semesters_offered": "Unknown"}
 
 
         return courses_prereqs_data, course_details_full, requirements_data
     except Exception as e:
-        print(f"Error in process_program_data for {program_url}: {e}")
-        return None, None, None
+        if isinstance(e, ProgramScrapeError):
+            raise
+        raise ProgramScrapeError(
+            f"Error in build_program_graph for {program_url}: {e}",
+            details={"program": program_name, "url": program_url},
+        ) from e

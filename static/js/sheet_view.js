@@ -1,3 +1,11 @@
+/*
+ * sheet_view.js
+ * Recomputes the Credit Tracker tab from `detailsData`.
+ *
+ * Courses count toward category totals when their status is DONE or TAKING.
+ * Any course with a planned semester contributes to the per-semester load
+ * table, regardless of completion status.
+ */
 export function updateSheetView(detailsData, requirementsData = window.programRequirements || {}) {
   let stats = {
     CORE: { taken: 0 },

@@ -32,6 +32,18 @@
 
   <div class="graph-wrapper">
     <div id="graph-content" class="tab-content active">
+      <div class="planner-info-bar">
+        <button id="plannerInfoBtn" class="info-icon-btn" type="button" aria-expanded="false" aria-controls="plannerInfoPopover">
+          <img src="{{ url_for('static', filename='icons/info.png') }}" alt="" aria-hidden="true" />
+          How planning works
+        </button>
+        <div id="plannerInfoPopover" class="planner-info-popover" hidden>
+          <strong>How to plan</strong>
+          <p>Colors show progress: gray is unassigned, red is to take, yellow is taking, and green is done.</p>
+          <p>Shapes show requirement type: rectangle is core, oval is complementary, and dashed border is elective.</p>
+          <p>Credit Tracker and GPA Tracker update when courses are marked <kbd>DONE</kbd> or <kbd>TAKING</kbd> and have a planned term.</p>
+        </div>
+      </div>
       <div class="custom-manipulation-buttons">
         <button id="addCustomCourseBtn" type="button" style="margin-right: 10px;">
           Add Single Course
@@ -49,7 +61,9 @@
       <div class="planner-layout">
         <div id="courseNetwork"></div>
         <aside id="optionalCourseShelf" class="optional-shelf">
-          <div class="optional-shelf-header"><h4 class="optional-shelf-title">Course Pool</h4></div>
+          <div class="optional-shelf-header">
+            <h4 class="optional-shelf-title">Course Pool</h4>
+          </div>
           <div id="optionalBucketList" class="optional-course-list"></div>
         </aside>
       </div>
@@ -72,14 +86,14 @@
         </p>
 
         <div class="inspector-controls">
-          <label>Category</label>
+          <label>Requirement Type</label>
           <select id="inspectorCategory">
             <option value="CORE">Core</option>
             <option value="COMPLEMENTARY">Complementary</option>
             <option value="ELECTIVE">Elective</option>
           </select>
           
-<label>Status</label>
+<label>Progress</label>
           <select id="inspectorStatus">
             <option value="Unassigned">Unassigned</option>
             <option value="TO TAKE">TO TAKE</option>

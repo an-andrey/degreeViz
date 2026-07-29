@@ -3,3 +3,4 @@ venv/
 lib/
 __pycache__/
 flask_session
+.venv

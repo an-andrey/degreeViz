@@ -1,15 +1,20 @@
+/*
+ * program_handler.js
+ * Handles "Add Another Program" from the graph page.
+ *
+ * It opens a program-search modal, asks Flask to scrape/process the selected
+ * program via `/add_program_to_graph`, merges the returned courses and
+ * prerequisites into `graphState`, and places visible new nodes to the right
+ * of the current graph.
+ */
 import { openCustomPrompt } from "./ui_handler.js";
-import { generateNodeLabel, getStatusColor } from "./node_utils.js";
-import { updateSheetView } from "./sheet_view.js";
 
 export function setupAddProgramButton(
   network,
   nodes,
   edges,
-  detailsData,
-  prereqsData,
+  graphState,
   saveGraphState,
-  markGraphDirty,
 ) {
   const addProgramBtn = document.getElementById("addProgramToGraphBtn");
   if (!addProgramBtn) return;
@@ -60,19 +65,17 @@ export function setupAddProgramButton(
               if (typeof saveGraphState === "function") saveGraphState();
 
               // 2. Update local memory
-              Object.assign(detailsData, result.new_details);
-              Object.assign(prereqsData, result.new_prereqs);
               if (result.new_requirements?.buckets) {
-                window.programRequirements = window.programRequirements || { buckets: [] };
                 const inferredProgramName = data.url_display || data.url || "Program";
                 result.new_requirements.buckets.forEach((bucket) => {
                   if (!bucket.program_name) bucket.program_name = inferredProgramName;
                 });
-                window.programRequirements.buckets = [
-                  ...(window.programRequirements.buckets || []),
-                  ...result.new_requirements.buckets,
-                ];
               }
+              graphState.mergeProgramData(
+                result.new_details || {},
+                result.new_prereqs || {},
+                result.new_requirements || {},
+              );
 
               // 3. Grid Placement Algorithm
               let maxX = -Infinity;
@@ -89,73 +92,30 @@ export function setupAddProgramButton(
               }
 
               const newNodesArray = [];
-              const coordsPayload = {}; // Stores the coordinates to send to Python
               let currentX = maxX + 300;
               let currentY = startY;
 
-              Object.keys(result.new_details).forEach((code, index) => {
-                const d = result.new_details[code];
+              Object.keys(result.new_details || {}).forEach((code, index) => {
+                const d = graphState.details[code];
                 if (!nodes.get(code) && (d.include_in_graph !== false)) {
                   const xOffset = currentX + Math.floor(index / 5) * 200;
                   const yOffset = currentY + (index % 5) * 150;
 
-                  // Add to nodes array
-                  newNodesArray.push({
-                    id: code,
-                    x: xOffset,
-                    y: yOffset,
-                    label: generateNodeLabel(
-                      code,
-                      d.title,
-                      d.credits,
-                      d.semesters_offered,
-                      d.category || "CORE",
-                      d.planned_semester || "Unassigned",
-                      d.status || "Unassigned",
-                    ),
-                    color: getStatusColor(d.status || "Unassigned"),
-                  });
-
-                  // Package coordinates for backend sync AND local memory
-                  coordsPayload[code] = { x: xOffset, y: yOffset };
-                  detailsData[code].x = xOffset;
-                  detailsData[code].y = yOffset;
+                  d.x = xOffset;
+                  d.y = yOffset;
+                  newNodesArray.push(code);
                 }
               });
 
-              nodes.add(newNodesArray);
-
-              // --- FIXED: Sync Coordinates to Flask Session ---
-              fetch("/update_session_coords", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(coordsPayload),
-              }).catch((err) => console.error("Coordinate sync failed:", err));
+              newNodesArray.forEach((code) => {
+                const d = graphState.details[code];
+                graphState.addNodeFromDetails(code, d.x, d.y, true);
+              });
 
               // 4. Draw Edges
-              const newEdgesArray = [];
-              Object.keys(result.new_prereqs).forEach((toNode) => {
-                const reqs = result.new_prereqs[toNode];
-                if (Array.isArray(reqs)) {
-                  reqs.forEach((fromNode) => {
-                    if (nodes.get(fromNode) && nodes.get(toNode)) {
-                      newEdgesArray.push({
-                        from: fromNode,
-                        to: toNode,
-                        arrows: "to",
-                        smooth: {
-                          enabled: true,
-                          type: "cubicBezier",
-                          forceDirection: "horizontal",
-                          roundness: 0.4,
-                        },
-                      });
-                    }
-                  });
-                }
+              Object.keys(result.new_prereqs || {}).forEach((toNode) => {
+                graphState.connectCourseEdges(toNode);
               });
-
-              edges.add(newEdgesArray);
 
               // 5. UI Cleanup
               const modal = document.getElementById("customPromptModal");
@@ -168,9 +128,7 @@ export function setupAddProgramButton(
                 submitBtn.disabled = false;
               }
 
-              markGraphDirty();
-              updateSheetView(detailsData, window.programRequirements || {});
-              window.dispatchEvent(new Event("degreeviz:data-updated"));
+              graphState.notify();
               network.fit();
             } else {
               alert("Error importing program: " + result.message);

@@ -2,8 +2,7 @@ import re
 import requests
 from bs4 import BeautifulSoup
 
-# Given url of the major, it scrapes the site and gets all the courses of the major.
-# Eventually this could be run on all programs and be hard-coded instead of running on every query.
+"""Helpers for reading one McGill program catalogue page."""
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -12,22 +11,23 @@ HEADERS = {
 COURSE_CODE_RE = re.compile(r"\b[A-Z]{3,5}\s?\d{3}[A-Z0-9]?\b")
 
 
-def get_program_soup(url):
-    # Passing a header to mimic a real user instead.
+def fetch_program_soup(url: str) -> BeautifulSoup:
+    """Fetch and parse a McGill program page."""
     res = requests.get(url, headers=HEADERS)
     res.raise_for_status()
     return BeautifulSoup(res.text, "html.parser")
 
 
-def get_program_codes(url, soup=None):
-    soup = soup or get_program_soup(url)
+def extract_program_course_codes(url: str, soup: BeautifulSoup | None = None) -> list[str]:
+    """Return course codes listed in a McGill program page."""
+    soup = soup or fetch_program_soup(url)
 
     # On McGill pages, program course rows use <td class="codecol">COMP 250</td>.
     course_codes = soup.find_all("td", class_="codecol")
     return [code.get_text(strip=True) for code in course_codes]
 
 
-def get_course_metadata_from_program_page(code, soup):
+def extract_course_metadata_from_program_page(code: str, soup: BeautifulSoup) -> dict | None:
     """Best-effort extraction of title/credits/terms from a program page table row.
 
     This is only a fallback for courses missing from static/json/courses_info.json.

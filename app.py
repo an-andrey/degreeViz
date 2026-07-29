@@ -1,14 +1,38 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify, session
-import json, os
+from flask import Flask, g, render_template, request, redirect, url_for, jsonify, session
+import os
+from collections.abc import Mapping
+from datetime import datetime, timezone
 from flask_session import Session
-from supabase import create_client, Client
+from supabase import create_client
 from dotenv import load_dotenv  
 
-#importing scripts
-from scripts.Getting_Info_For_Major import get_courses_of_major, get_information_for_major, get_prereqs
-from scripts import utils
-from scripts.app_functions import json_graph_file_handling, logging
-from datetime import datetime
+# importing scripts
+from degreeviz import logging_utils as logging
+from degreeviz.errors import AuthError, DatabaseError, DegreeVizError, GraphValidationError, ProgramScrapeError
+from degreeviz.graph.validation import (
+    validate_graph_payload,
+    validate_program_result,
+)
+from degreeviz.programs.graph_builder import build_program_graph
+import time
+
+"""
+Flask controller for DegreeViz.
+
+High-level flow:
+1. `/` scrapes a selected McGill program and validates the resulting graph.
+2. The resulting `prereqs_data`, `details_data`, and requirement buckets live in
+   the Flask session so `/graph` can render them into JavaScript globals.
+3. The graph page mutates its browser-side copies while the user edits.
+4. Small AJAX routes keep the Flask session close enough for refreshes.
+5. `/save_graph_to_db` receives the full browser state and persists it to
+   Supabase for logged-in users.
+
+The important split is session state vs browser state: after `/graph` loads,
+JavaScript is the active editing surface, and saving should send the complete
+current graph back to Flask rather than relying only on incremental session
+updates.
+"""
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "test"
@@ -17,8 +41,10 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_USE_SIGNER"] = True
 
 USER_SCHEDULES_TABLE_NAME = "userschedules"
+PLAN_SCHEMA_VERSION = 2
 
 Session(app)
+logging.configure_logging(app)
 
 # to handle different env, in Railway APP_ENV = 'prod'
 APP_ENV = os.environ.get("APP_ENV", "local").lower()
@@ -32,11 +58,86 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 SUPABASE_URL = os.environ.get("SUPABASE_URL") 
 SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
-Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+supabase_client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+
+@app.before_request
+def start_request_logging():
+    """Attach request metadata used by structured logs."""
+    logging.ensure_request_id()
+    g.request_start_time = time.perf_counter()
+
+
+@app.after_request
+def log_http_response(response):
+    """Log one compact request lifecycle event for non-static routes."""
+    if request.endpoint != "static":
+        duration_ms = (time.perf_counter() - getattr(g, "request_start_time", time.perf_counter())) * 1000
+        logging.log_event(
+            request,
+            "http_request",
+            status="error" if response.status_code >= 400 else "success",
+            details={"status_code": response.status_code},
+            duration_ms=duration_ms,
+        )
+    return response
+
+
+def json_error(error: DegreeVizError):
+    """Convert an expected application error into a JSON response."""
+    logging.log_event(request, "request_failed", status="error", error=error, details=error.details)
+    return jsonify({"status": "error", "message": error.user_message}), error.status_code
+
+
+def form_error(template_name: str, error: DegreeVizError):
+    """Render a user-safe form error and log the underlying failure."""
+    logging.log_event(request, "request_failed", status="error", error=error, details=error.details)
+    return render_template(template_name, error=error.user_message)
+
+
+def current_user_id() -> str:
+    """Return the authenticated Flask-session user id or raise."""
+    user_id = session.get("user_id")
+    if not user_id:
+        raise AuthError()
+    return user_id
+
+
+def store_graph_in_session(payload):
+    """Persist validated graph payload fields into Flask session."""
+    session['details_data'] = payload["details_data"]
+    session['prereqs_data'] = payload["prereqs_data"]
+    session['program_requirements'] = payload.get("program_requirements", {})
+    session['credit_requirements'] = payload.get("credit_requirements", {'core': 0, 'comp': 0, 'elec': 0})
+    session['graph_data_available'] = True
+    session.modified = True
+
+
+def utc_now_iso() -> str:
+    """Return a timezone-aware timestamp for Supabase JSON/API writes."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+def build_plan_metadata(raw_metadata, payload):
+    """Build lightweight metadata for migrations, debugging, and future agents."""
+    metadata = dict(raw_metadata) if isinstance(raw_metadata, Mapping) else {}
+    metadata.update({
+        "schema_version": PLAN_SCHEMA_VERSION,
+        "course_count": len(payload["details_data"]),
+        "requirement_group_count": len(payload.get("program_requirements", {}).get("buckets", [])),
+        "last_saved_at": utc_now_iso(),
+    })
+    return metadata
+
+
+def user_email_from_response(user_response) -> str | None:
+    """Extract the authenticated email from Supabase's user response."""
+    return getattr(getattr(user_response, "user", None), "email", None)
 
 #Injects Supabase credentials into all Jinja templates automatically
 @app.context_processor
 def inject_supabase_config():
+    """Expose public Supabase config to templates."""
     return dict(
         supabase_url=SUPABASE_URL,
         supabase_key=SUPABASE_KEY # important to pass the key and not service_role_key
@@ -45,6 +146,7 @@ def inject_supabase_config():
 
 
 def rebuild_requirements_from_details(details):
+    """Recreate minimal requirement buckets from per-course metadata."""
     buckets = {}
     for code, course in (details or {}).items():
         bucket_id = course.get("requirement_bucket")
@@ -63,6 +165,7 @@ def rebuild_requirements_from_details(details):
 
 
 def merge_program_requirements(current, incoming):
+    """Merge requirement buckets from two programs without duplicating ids."""
     merged = dict(current or {})
     existing_buckets = {bucket.get("id"): bucket for bucket in merged.get("buckets", [])}
     for bucket in (incoming or {}).get("buckets", []):
@@ -74,82 +177,62 @@ def merge_program_requirements(current, incoming):
     merged["course_to_bucket"] = {**(current or {}).get("course_to_bucket", {}), **(incoming or {}).get("course_to_bucket", {})}
     return merged
 
-courses_info = {}
-with open('static/json/courses_info.json', 'r', encoding='utf-8') as f:
-    courses_info = json.load(f)
-
 @app.route('/sync_auth', methods=['POST']) # sync js and python with supabase user id
 def sync_auth():
-    data = request.get_json()
+    """Verify Supabase browser auth and mirror the user id into Flask session."""
+    data = request.get_json() or {}
     access_token = data.get('access_token')
     
     if access_token:
         try:
             # Verify the token is real and get the user ID
-            user_response = Client.auth.get_user(access_token)
+            user_response = supabase_client.auth.get_user(access_token)
             session['user_id'] = user_response.user.id
+            logging.log_event(request, "auth_synced", details={"user_id": user_response.user.id})
             return jsonify({"status": "success"})
         except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 401
+            return json_error(AuthError(str(e), user_message="Unable to verify your login. Please sign in again."))
             
-    return jsonify({"status": "error", "message": "No token provided"}), 400
+    return json_error(AuthError("No token provided.", user_message="No login token was provided."))
 
 @app.route('/clear_auth', methods=['POST']) # remove user id from supabase on log-out
 def clear_auth():
+    """Clear Flask auth/session metadata when Supabase signs out."""
     session.pop('user_id', None)
     session.pop('schedule_id', None) # Clear any active graph ID
+    logging.log_event(request, "auth_cleared")
     return jsonify({"status": "success"})
 
 @app.route('/', methods=['GET', "POST"]) #home page
 def scrape_form():
-    #adding a log for each user query
-    logging.log_entry(request, "accessing home page")
+    """Home page: visualize a selected McGill program."""
+    logging.log_event(request, "home_page_opened")
 
     action = request.args.get('action')
-    if request.method == 'POST' and action == "Load Graph": # when a user uploads a JSON file
-            if 'graphFile' not in request.files: #checking if it's a json file
-                return render_template('scrape_form.html', error="Invalid file json file provided")
-            
-            file = request.files['graphFile']
-
-            if not json_graph_file_handling(file): #check if valid json file
-                return render_template('scrape_form.html', error="Invalid file json file provided")
-            
-            else: #process the json file for the graph
-                prereqs_data, details_data = json_graph_file_handling.process_json_graph_file(file)
-
-                #Saving to session
-                session['prereqs_data'] = prereqs_data
-                session['details_data'] = details_data
-                session['program_requirements'] = rebuild_requirements_from_details(details_data)
-                session['graph_data_available'] = True
-
-                return redirect("graph")
-
     url = request.args.get('url')
-    major = request.args.get("programSearch")
+    program_name = request.args.get("programSearch")
     
-    if action == "Visualize Program": 
-        program_data = get_information_for_major.process_program_data(url, major)
-        if not isinstance(program_data, tuple):
-            return render_template('scrape_form.html', error="Unable to scrape that program. Please try again later.")
-
-        if len(program_data) == 2:
-            courses_prereqs_data, processed_details_data = program_data
-            requirements_data = {}
-        else:
-            courses_prereqs_data, processed_details_data, requirements_data = program_data #scrape the major's site and grab all info
-        if courses_prereqs_data is None or processed_details_data is None:
-            return render_template('scrape_form.html', error="Unable to scrape that program. Please try again later.")
-        
-        #Saving the variable to session
-        session['prereqs_data'] = courses_prereqs_data
-        session['details_data'] = processed_details_data
-        session['program_requirements'] = requirements_data or {}
-        session['credit_requirements'] = (requirements_data or {}).get('credit_requirements', {'core': 0, 'comp': 0, 'elec': 0})
-        session['graph_data_available'] = True
-
-        return redirect("graph")
+    if action == "Visualize Program":
+        try:
+            if not url:
+                raise ProgramScrapeError("No program URL selected.", user_message="Please select a program from the search results.")
+            program_data = build_program_graph(url, program_name)
+            courses_prereqs_data, processed_details_data, requirements_data = validate_program_result(program_data)
+            payload = validate_graph_payload({
+                "details_data": processed_details_data,
+                "prereqs_data": courses_prereqs_data,
+                "program_requirements": requirements_data or {},
+                "credit_requirements": (requirements_data or {}).get('credit_requirements', {'core': 0, 'comp': 0, 'elec': 0}),
+            })
+            store_graph_in_session(payload)
+            logging.log_event(
+                request,
+                "program_visualized",
+                details={"program": program_name, "url": url, "course_count": len(processed_details_data)},
+            )
+            return redirect("graph")
+        except DegreeVizError as error:
+            return form_error('scrape_form.html', error)
 
     else:
         # Default action if no specific button was identified (e.g. initial GET request)
@@ -168,11 +251,12 @@ def scrape_form():
             return render_template('scrape_form.html', error="Please select a valid action.")
 
 @app.route("/graph", methods=["GET","POST"]) #main route where graph is displayed
-def graph(): 
+def graph():
+    """Render the interactive graph if session graph data exists."""
     if session.get('graph_data_available'): #see if there's a saved graph
         prereqs = session.get('prereqs_data', {})
         details = session.get('details_data', {})
-        logging.log_entry(request, "displaying graph")
+        logging.log_event(request, "graph_displayed", details={"course_count": len(details)})
         requirements = session.get('program_requirements') or rebuild_requirements_from_details(details)
         return render_template('graph.html', prereqs=prereqs, details=details, requirements=requirements)
     else:
@@ -181,12 +265,14 @@ def graph():
 
 @app.route("/add_program_form") # form for choosing which program to add to graph
 def add_program_form():
+    """Render the add-program form for an existing graph."""
     if not session.get('graph_data_available'): #verify there's an existing graph first
         return redirect(url_for('scrape_form', error="Please load or visualize a base program first."))
     return render_template("add_program_form.html")
 
 @app.route("/add_program_to_graph", methods=["GET"]) # adding another program to their graph (like a minor)
 def add_program_to_graph():
+    """Scrape another program and merge it into the active session graph."""
     if not session.get('graph_data_available'):
         return redirect(url_for('graph'))
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -195,17 +281,13 @@ def add_program_to_graph():
         new_program_url = request.args.get('url')
         new_program_name = request.args.get('programName')
 
-        logging.log_entry(request, f"adding program {new_program_name} (url: {new_program_url}) to graph")    
+        logging.log_event(request, "program_add_started", details={"program": new_program_name, "url": new_program_url})
+        if not new_program_url:
+            raise ProgramScrapeError("No program URL selected.", user_message="Please select a program from the search results.")
 
         # Fetch and process data for the new program
-        new_program_data = get_information_for_major.process_program_data(new_program_url, new_program_name)
-        if len(new_program_data) == 2:
-            new_prereqs, new_details = new_program_data
-            new_requirements = {}
-        else:
-            new_prereqs, new_details, new_requirements = new_program_data
-        if new_prereqs is None or new_details is None:
-            raise ValueError("Unable to scrape that program.")
+        new_program_data = build_program_graph(new_program_url, new_program_name)
+        new_prereqs, new_details, new_requirements = validate_program_result(new_program_data)
 
         # Retrieve current graph data from session
         current_prereqs = session.get('prereqs_data', {})
@@ -226,10 +308,16 @@ def add_program_to_graph():
                     if prereq_item not in current_prereqs[code]:
                         current_prereqs[code].append(prereq_item)
 
-        session['details_data'].update(new_details)
-        session['prereqs_data'].update(new_prereqs)
+        session['details_data'] = current_details
+        session['prereqs_data'] = current_prereqs
         session['program_requirements'] = merge_program_requirements(session.get('program_requirements', {}), new_requirements or {})
         session['graph_data_available'] = True
+        session.modified = True
+        logging.log_event(
+            request,
+            "program_added",
+            details={"program": new_program_name, "url": new_program_url, "new_course_count": len(new_details)},
+        )
 
         # NEW: If JavaScript asked for this, send the raw JSON data back!
         if is_ajax:
@@ -242,257 +330,192 @@ def add_program_to_graph():
 
         return redirect(url_for('graph'))
         
-    except Exception as e:
-        print(f"Error scraping program: {e}")
-        if is_ajax: return jsonify({"status": "error", "message": str(e)}), 500
+    except DegreeVizError as error:
+        if is_ajax:
+            return json_error(error)
+        form_error('scrape_form.html', error)
         return redirect(url_for('graph'))
 
-@app.route('/update_session_coords', methods=['POST'])
-def update_session_coords():
-    """Secretly saves JavaScript-generated coordinates into the Flask session so they survive a refresh."""
-    data = request.get_json()
-    if not data:
-        return jsonify({"status": "error", "message": "No data provided"}), 400
-
-    if 'details_data' in session:
-        for code, coords in data.items():
-            if code in session['details_data']:
-                session['details_data'][code]['x'] = coords.get('x')
-                session['details_data'][code]['y'] = coords.get('y')
-        session.modified = True # Force Flask to save the changes
-
-    return jsonify({"status": "success"})
-
-@app.route('/modify_graph', methods=['GET']) 
-def modify_nodes():
-
-    if not session.get('graph_data_available'):
-        # If no base graph, perhaps redirect to form with an error
-        return redirect(url_for('scrape_form', error='Graph data not initialized. Please load or scrape a program first.'))
-
-    request_type = request.args.get("request")
-    details = session.get('details_data', {})
-    prereqs = session.get("prereqs_data", {})
-
-
-    #Fro some reason, not able to add node on client side, so refreshing page with new info manually
-    if request_type == "add node":  # Changed from elif to if
-        node_id = request.args.get("node_id")
-        code = request.args.get("code")
-        title = request.args.get("node_title")
-        credits = request.args.get('credits', "3")
-        category = request.args.get("category", "CORE")
-        semesters_offered = request.args.get('semesters_offered', "Unknown")
-        
-        if node_id:
-            details[node_id] = {
-                "code": code,
-                "title": title,
-                "credits": credits,
-                "category": category,
-                "semesters_offered": semesters_offered,
-                "status": "Unassigned",
-                "planned_semester": "Unassigned",
-            }
-            prereqs[node_id] = []
-
-    #The rest of the requests are made using asynchronous AJAX requests, info updated with session only on refresh
-    elif request_type == "edit node":
-        node_id = request.args.get("node_id") # We now use the stable ID
-        code = request.args.get("code")
-        credits = request.args.get('credits', "N/A")
-        title = request.args.get("node_title")
-        category = request.args.get("category", "CORE")
-        semesters_offered = request.args.get('semesters_offered', "Unknown")
-                    
-        # Just update the existing properties safely!
-        if node_id in details:
-            details[node_id]["code"] = code
-            details[node_id]["credits"] = credits
-            details[node_id]["title"] = title
-            details[node_id]["category"] = category
-            details[node_id]["semesters_offered"] = semesters_offered
-        
-    elif request_type == "delete node":
-        # Fallback to "code" just in case you delete older nodes saved before the change
-        node_id = request.args.get("node_id") or request.args.get("code")
-        
-        if node_id:
-            if node_id in details:
-                del details[node_id]
-            if node_id in prereqs:
-                del prereqs[node_id]
-                
-            # Safely scrub the deleted node from any other courses' prerequisite lists
-            for req_list in prereqs.values():
-                while node_id in req_list:
-                    req_list.remove(node_id)
-        
-    elif request_type == "add edge":
-        from_node = request.args.get("from_node")
-        to_node = request.args.get("to_node")
-
-        if to_node in prereqs:
-            prereqs[to_node].append(from_node)
-        else:
-            prereqs[to_node] = [from_node]
-
-        
-
-    elif request_type == "delete edge":
-        from_node = request.args.get("from_node")
-        to_node = request.args.get("to_node")
-
-        prereqs[to_node].remove(from_node)
-
-
-    session['details_data'] = details
-    session["prereqs_data"] = prereqs
-    session.modified = True
-
-    return jsonify(status="success", message="Modification made successfully")
+@app.route('/sync_graph_session', methods=['POST'])
+def sync_graph_session():
+    """Stores the browser-owned graph draft in Flask session for refresh survival."""
+    try:
+        payload = validate_graph_payload(request.get_json() or {})
+        store_graph_in_session(payload)
+        logging.log_event(request, "graph_session_synced", details={"course_count": len(payload["details_data"])})
+        return jsonify({"status": "success"})
+    except DegreeVizError as error:
+        return json_error(error)
 
 @app.route('/save_graph_to_db', methods=['POST'])
 def save_graph():
-    #verify the graph got passed with the request
-    if not session.get('graph_data_available'):
-        return jsonify({"status": "error", "message": "No active graph to save."}), 400
-
-    data = request.get_json()
-    access_token = data.get("access_token")
-    schedule_name = data.get("schedule_name", "My Degree Plan")
-    
-    # Check if this graph already exists in the database
-    schedule_id = session.get('schedule_id') 
-
-    if not access_token:
-        return jsonify({"status": "error", "message": "User not authenticated."}), 401
-
+    """Persist the browser-owned graph state to Supabase."""
     try:
-        user_response = Client.auth.get_user(access_token)
+        #verify the graph got passed with the request
+        if not session.get('graph_data_available'):
+            raise GraphValidationError("No active graph in session.", user_message="No active graph to save.")
+
+        data = request.get_json() or {}
+        access_token = data.get("access_token")
+        plan_name = data.get("schedule_name", "My Degree Plan")
+        saved_plan_id = session.get('schedule_id')
+
+        if not access_token:
+            raise AuthError("Missing access token.", user_message="Please log in before saving your graph.")
+
+        user_response = supabase_client.auth.get_user(access_token)
         user_id = user_response.user.id
+        owner_email = user_email_from_response(user_response)
 
-        # if data available from updates on JS side, otherwise grab the session one
-        prereqs = data.get("prereqs_data", session.get('prereqs_data', {}))
-        details = data.get("details_data", session.get('details_data', {}))
-        credit_reqs = data.get("credit_requirements", {"core": 0, "comp": 0, "elec": 0})
+        payload = validate_graph_payload({
+            "details_data": data.get("details_data", session.get('details_data', {})),
+            "prereqs_data": data.get("prereqs_data", session.get('prereqs_data', {})),
+            "program_requirements": data.get("program_requirements", session.get('program_requirements', {})),
+            "credit_requirements": data.get("credit_requirements", session.get('credit_requirements', {"core": 0, "comp": 0, "elec": 0})),
+        })
+        prereqs = payload["prereqs_data"]
+        details = payload["details_data"]
+        program_requirements = payload["program_requirements"]
+        credit_reqs = payload["credit_requirements"]
+        plan_metadata = build_plan_metadata(data.get("plan_metadata"), payload)
+        store_graph_in_session(payload)
+        session['plan_metadata'] = plan_metadata
+        session['schema_version'] = PLAN_SCHEMA_VERSION
+        session.modified = True
+        saved_plan_payload = {
+            "prereqs_data": prereqs,
+            "details_data": details,
+            "program_requirements": program_requirements,
+            "credit_requirements": credit_reqs,
+            "plan_metadata": plan_metadata,
+            "schema_version": PLAN_SCHEMA_VERSION,
+            "updated_at": utc_now_iso(),
+        }
+        if owner_email:
+            saved_plan_payload["owner_email"] = owner_email
 
-
-        #update flask session with new data
-        session['prereqs_data'] = prereqs
-        session['details_data'] = details
-        session['credit_requirements'] = credit_reqs
-
-        if schedule_id:
-            # UPDATE EXISTING GRAPH
-            Client.table(USER_SCHEDULES_TABLE_NAME).update({
-                "prereqs_data": prereqs,
-                "details_data": details,
-                "credit_requirements": credit_reqs # <-- Added this to the update block!
-            }).eq("id", schedule_id).eq("user_id", user_id).execute()
+        if saved_plan_id:
+            # Update an existing saved plan. The DB still calls this id
+            # `schedule_id` in API payloads for backwards compatibility.
+            supabase_client.table(USER_SCHEDULES_TABLE_NAME).update(saved_plan_payload).eq("id", saved_plan_id).eq("user_id", user_id).execute()
             
-            logging.log_entry(request, f"updated graph '{schedule_id}' in database")
-            return jsonify({"status": "success", "message": "Graph updated successfully!", "schedule_id": schedule_id})
+            logging.log_event(request, "graph_saved", details={"mode": "update", "schedule_id": saved_plan_id, "course_count": len(details)})
+            return jsonify({"status": "success", "message": "Graph updated successfully!", "schedule_id": saved_plan_id})
             
         else:
-            # INSERT NEW GRAPH
-            response = Client.table(USER_SCHEDULES_TABLE_NAME).insert({
+            # Insert a new saved plan.
+            response = supabase_client.table(USER_SCHEDULES_TABLE_NAME).insert({
                 "user_id": user_id,
-                "schedule_name": schedule_name,
-                "prereqs_data": prereqs,
-                "credit_requirements": credit_reqs, # <-- Added the missing comma here!
-                "details_data": details
+                "schedule_name": plan_name,
+                **saved_plan_payload,
             }).execute()
 
             # Grab the newly generated UUID and save it to the session
             new_id = response.data[0]['id']
             session['schedule_id'] = new_id
             
-            logging.log_entry(request, f"saved new graph '{schedule_name}' to database")
+            logging.log_event(request, "graph_saved", details={"mode": "insert", "schedule_id": new_id, "schedule_name": plan_name, "course_count": len(details)})
             return jsonify({"status": "success", "message": "Graph saved successfully!", "schedule_id": new_id})
 
+    except DegreeVizError as error:
+        return json_error(error)
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
+        return json_error(DatabaseError(str(e)))
 
 @app.route('/saved_graphs')
-def saved_graphs():
-    user_id = session.get('user_id')
-    print(user_id)
-    # If Flask doesn't think they are logged in, kick them to home
-    if not user_id:
+def saved_graphs_redirect():
+    """Redirect old saved-graphs URLs to the saved-plans page."""
+    return redirect(url_for('saved_plans'))
+
+
+@app.route('/saved_plans')
+def saved_plans():
+    """Show the authenticated user's saved plans."""
+    try:
+        user_id = current_user_id()
+    except AuthError:
         return redirect(url_for('scrape_form'))
 
     try:
         # Ask Supabase for this user's graphs, newest first
-        response = Client.table(USER_SCHEDULES_TABLE_NAME).select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
-        schedules = response.data
+        response = supabase_client.table(USER_SCHEDULES_TABLE_NAME).select("*").eq("user_id", user_id).order("updated_at", desc=True).execute()
+        saved_plans = response.data
     except Exception as e:
-        print(f"Database error: {e}")
-        schedules = []
+        logging.log_event(request, "saved_graphs_load_failed", status="error", error=e)
+        saved_plans = []
 
-    return render_template('saved_graphs.html', schedules=schedules)
+    return render_template('saved_graphs.html', saved_plans=saved_plans)
 
 @app.route('/load_graph', methods=['POST'])
 def load_graph():
-    schedule_id = request.form.get('schedule_id')
-    user_id = session.get('user_id')
-    
-    if not schedule_id or not user_id:
-        return redirect(url_for('saved_graphs'))
+    """Load one saved graph from Supabase into Flask session."""
+    saved_plan_id = request.form.get('schedule_id')
     
     try:
-        # Fetch the specific graph's data from Supabase
-        response = Client.table(USER_SCHEDULES_TABLE_NAME).select("*").eq("id", schedule_id).eq("user_id", user_id).execute()
+        user_id = current_user_id()
+        if not saved_plan_id:
+            raise GraphValidationError("No saved plan id provided.", user_message="No saved plan was selected.")
+        # Fetch the specific saved plan from Supabase.
+        response = supabase_client.table(USER_SCHEDULES_TABLE_NAME).select("*").eq("id", saved_plan_id).eq("user_id", user_id).execute()
         
         if response.data:
             graph = response.data[0]
-            
-            # Load the data into the Flask session
-            session['prereqs_data'] = graph.get('prereqs_data', {})
-            session['details_data'] = graph.get('details_data', {})
-            session['program_requirements'] = rebuild_requirements_from_details(session['details_data'])
+            payload = validate_graph_payload({
+                "details_data": graph.get('details_data', {}),
+                "prereqs_data": graph.get('prereqs_data', {}),
+                "program_requirements": graph.get('program_requirements') or rebuild_requirements_from_details(graph.get('details_data', {})),
+                "credit_requirements": graph.get('credit_requirements', {"core": 0, "comp": 0, "elec": 0}),
+            })
+            store_graph_in_session(payload)
             session['schedule_id'] = graph.get('id')
-            session['graph_data_available'] = True
+            session['plan_metadata'] = graph.get('plan_metadata') or {}
+            session['schema_version'] = graph.get('schema_version') or 1
+            session.modified = True
             
-            #Load the credit requirements into session memory
-            session['credit_requirements'] = graph.get('credit_requirements', {"core": 0, "comp": 0, "elec": 0})
-            
-            logging.log_entry(request, f"opened saved graph '{graph.get('schedule_name')}'")
+            logging.log_event(request, "saved_graph_loaded", details={"schedule_id": saved_plan_id, "schedule_name": graph.get('schedule_name')})
             return redirect(url_for('graph'))
+        raise GraphValidationError("Saved plan not found.", user_message="That saved plan could not be found.")
             
+    except DegreeVizError as error:
+        logging.log_event(request, "saved_graph_load_failed", status="error", error=error, details=error.details)
     except Exception as e:
-        print(f"Error loading graph: {e}")
+        logging.log_event(request, "saved_graph_load_failed", status="error", error=e)
     
-    return redirect(url_for('saved_graphs'))
+    return redirect(url_for('saved_plans'))
 
 @app.route('/delete_graph', methods=['POST'])
 def delete_graph():
-    data = request.get_json()
-    schedule_id = data.get('schedule_id')
-    user_id = session.get('user_id')
-
-    if not schedule_id or not user_id:
-        return jsonify({"status": "error", "message": "Unauthorized"}), 401
-    
+    """Delete one saved graph belonging to the authenticated user."""
     try:
-        # Delete the graph from Supabase
-        Client.table(USER_SCHEDULES_TABLE_NAME).delete().eq("id", schedule_id).eq("user_id", user_id).execute()
+        data = request.get_json() or {}
+        saved_plan_id = data.get('schedule_id')
+        user_id = current_user_id()
+
+        if not saved_plan_id:
+            raise GraphValidationError("No saved plan id provided.", user_message="No saved plan was selected.")
+
+        # Delete the saved plan from Supabase.
+        supabase_client.table(USER_SCHEDULES_TABLE_NAME).delete().eq("id", saved_plan_id).eq("user_id", user_id).execute()
         
-        # If the user deletes the graph they are currently looking at, clear the session tracking
-        if session.get('schedule_id') == schedule_id:
+        # If the user deletes the plan they are currently looking at, clear the session tracking.
+        if session.get('schedule_id') == saved_plan_id:
             session.pop('schedule_id', None)
 
-        logging.log_entry(request, f"deleted graph '{schedule_id}'")
+        logging.log_event(request, "saved_graph_deleted", details={"schedule_id": saved_plan_id})
         return jsonify({"status": "success"})
+    except DegreeVizError as error:
+        return json_error(error)
     except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 400
+        return json_error(DatabaseError(str(e)))
 
 @app.route('/reset_password')
 def reset_password():
+    """Render the password reset page used by Supabase email links."""
     return render_template('reset_password.html')
 
 @app.route('/terms_of_service') # required for google oauth
 def terms_of_service():
+    """Render legal pages required by OAuth providers."""
     return render_template('terms_of_service.html')
 
 if __name__ == '__main__':
