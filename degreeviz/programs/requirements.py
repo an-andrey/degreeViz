@@ -41,15 +41,6 @@ def _slugify(value: str, fallback: str) -> str:
     return slug or fallback
 
 
-def _category_from_heading(heading: str) -> str:
-    h = heading.lower()
-    if "required" in h:
-        return "CORE"
-    return "COMPLEMENTARY"
-
-
-
-
 def _is_required_heading(text: str) -> bool:
     t = text.lower()
     return "required" in t
@@ -64,6 +55,20 @@ def _is_footer_or_site_text(text: str) -> bool:
 def _looks_like_constraint(text: str) -> bool:
     t = text.lower()
     return ("credit" in t) and ("selected from" in t or "excluding" in t or "level or above" in t or "must be at the" in t)
+
+
+def _looks_like_flexible_rule(text: str) -> bool:
+    """Return True when a requirement cannot be represented by static courses."""
+    t = text.lower()
+    min_credits, max_credits = _credit_bounds(text)
+    has_open_credit_range = max_credits is not None and min_credits == 0 and max_credits > 0
+    has_dynamic_course_filter = (
+        "level or above" in t
+        or "courses at the" in t
+        or "courses numbered" in t
+        or "from computer science" in t
+    )
+    return "credit" in t and (has_open_credit_range or has_dynamic_course_filter)
 
 
 def _is_note_text(text: str) -> bool:
@@ -96,6 +101,8 @@ def _extract_inline_courses(text: str) -> list[str]:
 def _flush_standalone_text_bucket(text: str, buckets: list[RequirementBucket], current_section_title: str) -> None:
     min_credits, max_credits = _credit_bounds(text)
     courses = _extract_inline_courses(text)
+    if not courses:
+        return
     bucket = RequirementBucket(
         id=_slugify(f"{current_section_title}-{text}", f"bucket-{len(buckets)+1}"),
         title=text,
@@ -112,16 +119,16 @@ def extract_program_requirements(soup):
 
     buckets: list[RequirementBucket] = []
     current_section_title = "Program Courses"
-    current_section_category = "CORE"
     pending_bucket_label = ""
     pending_constraint_text = ""
+    skip_next_flexible_courselist = False
 
     for element in content_root.find_all(["h2", "p", "div"], recursive=True):
         if element.name == "h2":
             current_section_title = _clean_text(element.get_text(" ", strip=True))
-            current_section_category = _category_from_heading(current_section_title)
             pending_bucket_label = ""
             pending_constraint_text = ""
+            skip_next_flexible_courselist = False
             continue
 
         if element.name == "p":
@@ -129,6 +136,12 @@ def extract_program_requirements(soup):
             if _is_footer_or_site_text(text):
                 continue
             if _is_note_text(text):
+                continue
+
+            if _looks_like_flexible_rule(text):
+                pending_bucket_label = ""
+                pending_constraint_text = ""
+                skip_next_flexible_courselist = True
                 continue
 
             if "selected from" in text.lower() and "credit" in text.lower():
@@ -160,8 +173,15 @@ def extract_program_requirements(soup):
             table = element.find("table", class_="sc_courselist")
             if not table:
                 continue
+            if skip_next_flexible_courselist:
+                skip_next_flexible_courselist = False
+                continue
 
             bucket_label = pending_bucket_label or current_section_title
+            if _looks_like_flexible_rule(bucket_label):
+                pending_bucket_label = ""
+                pending_constraint_text = ""
+                continue
             if _is_choice_text(bucket_label):
                 choice_num = len([b for b in buckets if b.id.startswith(_slugify(current_section_title, "section"))]) + 1
                 bucket_label = f"{bucket_label[:-1]} (Option Group {choice_num})"

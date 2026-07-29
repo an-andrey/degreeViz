@@ -1,4 +1,19 @@
-import { generateNodeLabel, getStatusColor } from "./node_utils.js";
+/*
+ * data_init.js
+ * Converts Flask's JSON graph data into vis-network DataSets.
+ *
+ * `applySmartLayout` computes initial x/y coordinates from prerequisite
+ * depth when a course does not already have saved coordinates. It mutates
+ * `detailsData` directly so later saves can persist the generated layout.
+ * `initializeNodes` skips courses marked `include_in_graph === false`, while
+ * `initializeEdges` draws only prerequisite edges whose endpoints are visible.
+ */
+import {
+  generateNodeLabel,
+  getCategoryShape,
+  getCategoryShapeProperties,
+  getStatusColor,
+} from "./node_utils.js";
 
 function applySmartLayout(detailsData, prereqsData) {
   const levels = {};
@@ -51,9 +66,9 @@ function applySmartLayout(detailsData, prereqsData) {
   });
 
   // 5. Assign Coordinates and force wrapping!
-  const X_SPACING = 280; // Distance between columns
-  const Y_SPACING = 130; // Distance between rows
-  const MAX_PER_COLUMN = 6; // Force wrapping if more than 6 courses!
+  const X_SPACING = 220; // Horizontal distance between prerequisite levels
+  const Y_SPACING = 95; // Vertical distance between courses in the same level
+  const MAX_PER_COLUMN = 8; // Wrap only when a level is genuinely crowded
 
   let currentX = 0;
 
@@ -114,12 +129,17 @@ export function initializeNodes(detailsData, prereqsData) {
         course.code || nodeId,
         course.title,
         course.credits,
-        course.semesters_offered,
-        course.category,
         course.planned_semester,
-        course.status,
       ),
       color: getStatusColor(course.status),
+      shape: getCategoryShape(course.category),
+      shapeProperties: getCategoryShapeProperties(course.category),
+      title: `${course.code || nodeId}
+${course.title}
+Requirement type: ${course.category || "CORE"}
+Progress: ${course.status || "Unassigned"}
+Planned term: ${course.planned_semester || "Unassigned"}
+Offered: ${course.semesters_offered || "Unknown"}`,
     });
   });
 
@@ -133,10 +153,11 @@ export function initializeEdges(prereqsData, nodes) {
     if (Array.isArray(reqs)) {
       reqs.forEach((fromNode) => {
         // Only draw the edge if both nodes actually exist on the canvas
-        if (nodes.get(fromNode) && nodes.get(toNode)) {
-          edgesArray.push({
-            from: fromNode,
-            to: toNode,
+          if (nodes.get(fromNode) && nodes.get(toNode)) {
+            edgesArray.push({
+              id: `${fromNode}->${toNode}`,
+              from: fromNode,
+              to: toNode,
             arrows: "to",
             smooth: {
               enabled: true,

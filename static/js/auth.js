@@ -1,3 +1,11 @@
+/*
+ * auth.js
+ * Browser-side Supabase authentication glue.
+ *
+ * Supabase owns the real auth session in the browser. Whenever auth changes,
+ * this file updates the header UI and calls Flask `/sync_auth` or
+ * `/clear_auth` so server routes like saved plans can trust the same user.
+ */
 const supabaseClient = window.supabaseClient;
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -166,7 +174,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Smart Redirect: If looking at a graph, kick to home
     const currentPath = window.location.pathname;
-    if (currentPath.includes("graph") || currentPath.includes("saved_graphs")) {
+    if (currentPath.includes("graph") || currentPath.includes("saved_graphs") || currentPath.includes("saved_plans")) {
       window.location.href = "/";
     }
   });

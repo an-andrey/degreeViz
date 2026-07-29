@@ -1,3 +1,11 @@
+/*
+ * gpa_tracker.js
+ * Builds the GPA tab from courses marked DONE.
+ *
+ * DONE courses are grouped by planned semester; courses without a planned
+ * term are grouped under "Unassigned Term". GPA calculations only include
+ * DONE courses that also have a selected grade value.
+ */
 export function updateGpaTracker(detailsData) {
   const transcriptContainer = document.getElementById("transcriptContainer");
   const cgpaDisplay = document.getElementById("cumulativeGpaDisplay");

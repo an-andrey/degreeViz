@@ -49,31 +49,19 @@
   </div>
 </div>
 
-<div
-  class="seo-content"
-  style="
-    max-width: 600px;
-    margin: 40px auto;
-    text-align: center;
-    color: var(--text-muted);
-    font-size: 0.9em;
-  "
->
+<div class="seo-content">
   <h3>The Interactive McGill Degree Planner</h3>
   <p>
     DegreeViz is an unofficial course visualizer designed to help McGill
-    University students navigate the eCalendar. By searching for your major or
-    minor, our tool automatically generates an interactive map of your required
+    University students navigate the eCalendar. By searching for your program,
+    our tool automatically generates an interactive map of your required
     courses, allowing you to track core and complementary credits, instantly
     visualize prerequisites, and build a stress-free graduation plan.
   </p>
 </div>
 
 {% if error %}
-<p
-  class="error"
-  style="text-align: center; max-width: 500px; margin: 20px auto"
->
+<p class="error form-error-centered">
   {{ error | safe }}
 </p>
 {% endif %} {% endblock %}{% block scripts %}

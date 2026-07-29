@@ -98,6 +98,14 @@ h3 {
   color: var(--text-muted);
 }
 
+.seo-content {
+  max-width: 600px;
+  margin: 40px auto;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9em;
+}
+
 /* --- Forms & Inputs --- */
 .form-section {
   margin-bottom: 40px;
@@ -193,14 +201,12 @@ button:hover {
 
 /* Primary Action Buttons (Red) */
 input[type="submit"][value="Visualize Program"],
-#addProgramButton,
-.custom-manipulation-buttons button#exportGraphBtn {
+#addProgramButton {
   background-color: var(--mcgill-red);
 }
 
 input[type="submit"][value="Visualize Program"]:hover,
-#addProgramButton:hover,
-.custom-manipulation-buttons button#exportGraphBtn:hover {
+#addProgramButton:hover {
   background-color: var(--mcgill-red-hover);
 }
 
@@ -345,27 +351,31 @@ button:disabled {
 
 .node-inspector {
   position: absolute;
-  top: 50px;
-  right: -300px;
-  width: 280px;
+  top: 0;
+  left: 100%;
+  width: 360px;
   height: 100%;
   background-color: var(--surface-color);
   border-left: 1px solid var(--border-color);
-  border-radius: 0;
+  border-radius: 8px;
   box-shadow: -4px 0 15px rgba(0, 0, 0, 0.05);
-  padding: 20px 20px 50px 20px;
-  transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 24px 24px 32px 24px;
+  transition: transform 0.24s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.16s ease;
   z-index: 10;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-
-  max-height: 85vh; /* Prevents it from growing taller than the screen */
-  overflow-y: auto; /* Adds a scrollbar ONLY if the content overflows */
+  max-height: none;
+  overflow-y: auto;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(16px);
 }
 
 .node-inspector.open {
-  right: 0;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
 }
 
 .inspector-header {
@@ -487,6 +497,12 @@ select.badge-select:focus {
   font-weight: 500;
 }
 
+.form-error-centered {
+  max-width: 500px;
+  margin: 20px auto;
+  text-align: center;
+}
+
 /* --- Footer --- */
 .main-footer {
   text-align: center;
@@ -504,6 +520,10 @@ select.badge-select:focus {
 
 .main-footer a:hover {
   text-decoration: underline;
+}
+
+.footer-links {
+  margin-top: 10px;
 }
 
 /* --- Mobile --- */
@@ -636,7 +656,7 @@ select.badge-select:focus {
 
 /* 3. Style the ACTUAL clickable button inside the wrapper */
 .vis-network .vis-edit-mode .vis-button {
-  background: var(--surface-color) url("../edit_icon.png") no-repeat 10px center !important;
+  background: var(--surface-color) url("../icons/pen.png") no-repeat 10px center !important;
   background-size: 18px 18px !important;
 
   border: 1px solid var(--border-color) !important;
@@ -705,7 +725,7 @@ select.badge-select:focus {
 
 /* Adjust your custom icon on the 'Back' button */
 .vis-network .vis-manipulation .vis-button.vis-back {
-  background: var(--surface-color) url("../edit_icon.png") no-repeat 8px center !important;
+  background: var(--surface-color) url("../icons/pen.png") no-repeat 8px center !important;
   background-size: 16px 16px !important;
   padding-left: 30px !important;
 }
@@ -887,6 +907,18 @@ select.badge-select:focus {
   font-size: 1em;
   margin-left: 5px;
 }
+
+.compact-text-link {
+  font-size: 0.85em;
+  margin: 0;
+}
+
+.label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
 .text-link:hover {
   text-decoration: underline;
   background: none;
@@ -943,6 +975,11 @@ select.badge-select:focus {
   font-size: 0.9em;
   color: var(--error-text);
   text-align: center;
+}
+
+#resetMessage {
+  margin-top: 0;
+  margin-bottom: 15px;
 }
 
 /* --- Profile Dropdown Menu --- */
@@ -1061,9 +1098,93 @@ select.badge-select:focus {
   cursor: default;
 }
 
-/* --- Saved Graphs Dashboard --- */
+.primary-btn,
+.full-width-submit {
+  background-color: var(--mcgill-red);
+  color: var(--surface-color);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.primary-btn:hover,
+.full-width-submit:hover {
+  background-color: var(--mcgill-red-hover);
+}
+
+.full-width-submit {
+  width: 100%;
+  margin: 0;
+}
+
+/* --- Saved Plans Dashboard --- */
 .dashboard-container {
   width: 100%;
+}
+
+.legal-page {
+  margin-top: 20px;
+}
+
+.legal-card {
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: left;
+}
+
+.legal-title {
+  text-align: center;
+  margin-bottom: 30px;
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 15px;
+}
+
+.legal-copy {
+  color: var(--text-muted);
+  margin-bottom: 25px;
+}
+
+.legal-copy.compact {
+  margin-bottom: 10px;
+}
+
+.legal-list {
+  color: var(--text-muted);
+  margin-bottom: 25px;
+  line-height: 1.6;
+}
+
+.legal-actions {
+  text-align: center;
+  margin-top: 40px;
+}
+
+.return-home-btn {
+  padding: 10px 20px;
+  font-size: 1em;
+}
+
+.prompt-card {
+  max-width: 450px;
+}
+
+.prompt-title {
+  text-align: center;
+  margin: 5px 0 20px;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.prompt-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 25px;
+}
+
+.prompt-submit-btn {
+  flex: 1;
+  margin: 0;
 }
 
 .dashboard-header {
@@ -1072,14 +1193,14 @@ select.badge-select:focus {
   padding-bottom: 15px;
 }
 
-.graphs-grid {
+.saved-plans-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
 }
 
-/* --- Saved Graphs Cards --- */
-.graph-card {
+/* --- Saved Plans Cards --- */
+.saved-plan-card {
   position: relative; /* Anchors the red stripe */
   background-color: var(--surface-color);
   padding: 30px 25px 20px 25px;
@@ -1095,7 +1216,7 @@ select.badge-select:focus {
 }
 
 /* Draws the red stripe seamlessly inside the top border */
-.graph-card::before {
+.saved-plan-card::before {
   content: "";
   position: absolute;
   top: 0;
@@ -1105,13 +1226,13 @@ select.badge-select:focus {
   background-color: var(--mcgill-red);
 }
 
-.graph-card:hover {
+.saved-plan-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
   border-color: var(--mcgill-red) !important;
 }
 
-.graph-card h3 {
+.saved-plan-card h3 {
   margin-top: 0;
   margin-bottom: 15px;
   font-size: 1.3em;
@@ -1120,20 +1241,20 @@ select.badge-select:focus {
   padding-bottom: 12px;
 }
 
-.graph-card-meta {
+.saved-plan-card-meta {
   font-size: 0.9em;
   color: var(--text-muted);
   margin-bottom: 25px;
   flex-grow: 1;
 }
 
-.graph-card-meta p {
+.saved-plan-card-meta p {
   margin: 5px 0;
 }
 
 /* Card Actions */
 /* Card Actions */
-.graph-card-actions {
+.saved-plan-card-actions {
   display: flex;
   gap: 12px;
   margin-top: auto;
@@ -1196,6 +1317,10 @@ select.badge-select:focus {
 }
 .mt-15 {
   margin-top: 15px;
+}
+
+.fit-content {
+  width: auto;
 }
 
 /* --- Sheet View Tables --- */
@@ -1435,6 +1560,63 @@ select.badge-select:focus {
   padding: 2px 6px;
 }
 
+.planner-info-bar {
+  position: relative;
+  display: inline-flex;
+  margin-bottom: 12px;
+}
+
+.info-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 11px;
+  color: var(--text-main);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.info-icon-btn:hover {
+  background: var(--bg-color);
+}
+
+.info-icon-btn img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.planner-info-popover {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 8px);
+  left: 0;
+  width: min(340px, calc(100vw - 48px));
+  padding: 12px 14px;
+  color: var(--text-muted);
+  background: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-left: 4px solid var(--mcgill-red);
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.planner-info-popover strong {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--text-main);
+}
+
+.planner-info-popover p {
+  margin: 6px 0 0;
+}
+
 /* --- GPA Tracker Styles --- */
 .cgpa-display {
   color: var(--mcgill-red);
@@ -1554,6 +1736,7 @@ button#scrapeButton:disabled {
   margin-left: auto;
   min-width: 300px;
   max-width: 380px;
+  box-sizing: border-box;
   background: #fafafa;
   border: 1px solid var(--border-color);
   border-radius: 8px;
@@ -1567,9 +1750,13 @@ button#scrapeButton:disabled {
 .optional-course-list {
   max-height: 220px;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding-right: 6px;
+  box-sizing: border-box;
 }
 .optional-course-item {
   display: flex;
@@ -1584,6 +1771,8 @@ button#scrapeButton:disabled {
 
 
 .optional-bucket {
+  width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: #fff;
@@ -1607,20 +1796,65 @@ button#scrapeButton:disabled {
   font-size: 0.88rem;
   padding: 6px 0;
   border-top: 1px dashed var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.optional-course-row:hover,
+.optional-course-row:focus {
+  background: rgba(31, 41, 55, 0.04);
+  outline: none;
+}
+
+.optional-course-row span {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.optional-course-row button {
+  flex: 0 0 auto;
 }
 
 .optional-bucket-actions {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin: 8px 0 10px 0;
+  gap: 4px;
+  align-items: center;
+  justify-content: flex-end;
+  flex: 0 0 auto;
+  margin: 0;
 }
 
-.optional-bucket-actions .secondary-btn,
-.optional-bucket-actions .danger-btn {
-  min-width: 40px;
-  padding: 6px 10px;
-  font-size: 1rem;
+.icon-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  padding: 4px;
+  margin: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+}
+
+.icon-tool-btn:hover {
+  background-color: var(--bg-color);
+  border-color: var(--border-color);
+}
+
+.danger-icon-tool-btn {
+  background: transparent;
+}
+
+.danger-icon-tool-btn:hover {
+  background-color: #f8d7da;
+  border-color: var(--mcgill-red-hover);
+}
+
+.icon-tool-btn img {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
 }
 .optional-course-row:first-of-type {
   border-top: none;
@@ -1632,7 +1866,69 @@ button#scrapeButton:disabled {
   background: #b91c1c;
 }
 
-.optional-shelf-title { margin: 0 0 6px 0; }
+.optional-course-row .secondary-btn,
+.optional-course-row .danger-btn {
+  background: transparent;
+  border: 1px solid currentColor;
+  box-shadow: none;
+}
+
+.optional-course-row .secondary-btn {
+  color: #1f2937;
+}
+
+.optional-course-row .danger-btn {
+  color: #b91c1c;
+}
+
+.optional-course-row .secondary-btn:hover,
+.optional-course-row .danger-btn:hover {
+  background: rgba(31, 41, 55, 0.06);
+}
+
+.optional-course-row .danger-btn:hover {
+  background: rgba(185, 28, 28, 0.06);
+}
+
+.optional-shelf-title {
+  width: 100%;
+  margin: 0 0 6px 0;
+  text-align: center;
+}
+
+.optional-shelf-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82em;
+  line-height: 1.35;
+}
+
+.optional-program-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin: -2px 0 8px;
+}
+
+.bucket-create-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  padding: 4px 8px;
+  color: var(--text-main);
+  background: transparent;
+  border: 1px solid var(--border-color);
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: none;
+}
+
+.bucket-create-btn img {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+}
 
 
 .planner-layout {
@@ -1640,9 +1936,11 @@ button#scrapeButton:disabled {
   grid-template-columns: 1fr 360px;
   gap: 14px;
   align-items: start;
+  min-width: 0;
 }
 
 #courseNetwork {
+  min-width: 0;
   min-height: 760px;
 }
 
@@ -1650,6 +1948,7 @@ button#scrapeButton:disabled {
   margin-left: 0;
   width: 100%;
   max-width: none;
+  min-width: 0;
   position: sticky;
   top: 90px;
   max-height: calc(100vh - 140px);
@@ -1753,8 +2052,9 @@ button#scrapeButton:disabled {
 
 .optional-shelf-header {
   display:flex;
+  flex-direction: column;
   align-items:center;
-  justify-content:space-between;
+  justify-content:flex-start;
   gap:8px;
 }
 .optional-shelf.collapsed .optional-course-list {
@@ -1765,6 +2065,9 @@ button#scrapeButton:disabled {
 }
 
 .optional-program-group {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   background:#fff;
@@ -1772,15 +2075,48 @@ button#scrapeButton:disabled {
   padding:6px;
 }
 .optional-program-group > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-weight: 700;
   cursor: pointer;
   padding: 4px 2px;
+  min-height: 34px;
+  list-style: none;
+}
+.optional-program-group > summary::-webkit-details-marker {
+  display: none;
+}
+.optional-program-group > summary::before {
+  content: "▸";
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+.optional-program-group[open] > summary::before {
+  content: "▾";
+}
+.optional-program-group > summary .program-title {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.optional-program-group > summary .optional-program-toolbar {
+  flex: 0 0 auto;
+  margin: 0;
 }
 .optional-bucket > summary {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: space-between;
   font-size: 1.05rem;
   font-weight: 700;
   cursor: pointer;
   list-style: none;
+}
+.optional-bucket > summary .bucket-title {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .optional-bucket > summary::-webkit-details-marker { display:none; }
 .optional-bucket > summary::before { content: "▸ "; color: var(--text-muted);}

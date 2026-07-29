@@ -1,3 +1,13 @@
+/*
+ * node_utils.js
+ * Small presentation helpers shared by graph modules.
+ *
+ * `getStatusColor` centralizes vis-network color objects for course status.
+ * `getCategoryShape` centralizes text-safe node shapes for requirement types.
+ * `getCategoryShapeProperties` adds small visual differences without changing
+ * node geometry enough to make labels spill outside the node.
+ * `generateNodeLabel` centralizes the compact label shown inside each node.
+ */
 // Maps status to high-contrast pastel colors with crisp borders
 export function getStatusColor(status) {
   const s = status ? status.toUpperCase() : "UNASSIGNED";
@@ -30,15 +40,25 @@ export function getStatusColor(status) {
   }
 }
 
-// Generates a highly readable label using bold and italic HTML tags
+export function getCategoryShape(category) {
+  const normalizedCategory = String(category || "").toUpperCase();
+  if (normalizedCategory === "COMPLEMENTARY") return "ellipse";
+  return "box";
+}
+
+export function getCategoryShapeProperties(category) {
+  const normalizedCategory = String(category || "").toUpperCase();
+  if (normalizedCategory === "ELECTIVE") return { borderDashes: [6, 4] };
+  return { borderDashes: false };
+}
+
+// Generates a compact label; progress is shown by color, requirement type by shape.
 export function generateNodeLabel(
   code,
   title,
   credits,
-  semesters,
-  category,
   plannedSemester = "Unassigned",
-  status = "Unassigned",
 ) {
-  return `<b><code>${code}</code></b>\n${title}\n(${credits} credits)\nStatus: <b>${status}</b>\nTerm Planned: <b>${plannedSemester}</b>\n<b>[${category}]</b>\n`;
+  const termText = plannedSemester && plannedSemester !== "Unassigned" ? `\n${plannedSemester}` : "";
+  return `<b><code>${code}</code></b>\n${title}\n(${credits} credits)${termText}\n`;
 }

@@ -1,4 +1,4 @@
-{% extends "base.html" %} {% block title %}My Saved Graphs - DegreeViz{%
+{% extends "base.html" %} {% block title %}My Saved Plans - DegreeViz{%
 endblock %} {% block content %}
 <div class="dashboard-container">
   <div class="dashboard-header">
@@ -8,32 +8,32 @@ endblock %} {% block content %}
     </p>
   </div>
 
-  {% if schedules %}
-  <div class="graphs-grid">
-    {% for schedule in schedules %}
-    <div class="graph-card">
-      <h3>{{ schedule.schedule_name }}</h3>
+  {% if saved_plans %}
+  <div class="saved-plans-grid">
+    {% for saved_plan in saved_plans %}
+    <div class="saved-plan-card">
+      <h3>{{ saved_plan.schedule_name }}</h3>
 
-      <div class="graph-card-meta">
+      <div class="saved-plan-card-meta">
         <p>
-          <strong>Courses:</strong> {{ schedule.details_data.keys() | length }}
+          <strong>Courses:</strong> {{ saved_plan.details_data.keys() | length }}
           mapped
         </p>
-        <p><strong>Created:</strong> {{ schedule.created_at[:10] }}</p>
+        <p><strong>Created:</strong> {{ saved_plan.created_at[:10] }}</p>
       </div>
 
-      <div class="graph-card-actions">
+      <div class="saved-plan-card-actions">
         <form
           action="{{ url_for('load_graph') }}"
           method="POST"
           class="action-form open-form"
         >
-          <input type="hidden" name="schedule_id" value="{{ schedule.id }}" />
+          <input type="hidden" name="schedule_id" value="{{ saved_plan.id }}" />
           <button type="submit" class="btn-open">Open</button>
         </form>
 
         <form class="action-form delete-form">
-          <input type="hidden" name="schedule_id" value="{{ schedule.id }}" />
+          <input type="hidden" name="schedule_id" value="{{ saved_plan.id }}" />
           <button type="submit" class="btn-delete">Delete</button>
         </form>
       </div>
@@ -42,9 +42,9 @@ endblock %} {% block content %}
   </div>
   {% else %}
   <div class="empty-state">
-    <p>You don't have any saved graphs yet.</p>
+    <p>You don't have any saved plans yet.</p>
     <a href="{{ url_for('scrape_form') }}">
-      <button class="primary-btn mt-15" style="width: auto">
+      <button class="primary-btn mt-15 fit-content">
         Create a New Plan
       </button>
     </a>
