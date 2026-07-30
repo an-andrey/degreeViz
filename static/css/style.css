@@ -231,6 +231,16 @@ button:disabled {
   margin: 0;
 }
 
+#addCustomCourseBtn,
+#addProgramToGraphBtn {
+  background-color: var(--mcgill-red);
+}
+
+#addCustomCourseBtn:hover,
+#addProgramToGraphBtn:hover {
+  background-color: var(--mcgill-red-hover);
+}
+
 /* --- Workspace & Tabs Container --- */
 
 /* This invisible container takes over the width/centering of the old graph-wrapper */
@@ -539,10 +549,6 @@ select.badge-select:focus {
     width: 100%;
     margin-right: 0;
     margin-bottom: 10px;
-  }
-  .custom-manipulation-buttons {
-    flex-direction: column;
-    flex-wrap: wrap;
   }
 }
 
@@ -1328,11 +1334,13 @@ select.badge-select:focus {
   display: flex;
   gap: 30px;
   align-items: flex-start;
+  min-width: 0;
 }
 
 /* Upgraded to exactly match your .card and .program-card styles */
 .table-card {
   flex: 1;
+  min-width: 0;
   background-color: var(--surface-color);
   padding: 35px 30px; /* Increased top padding to make room for the red stripe */
   border: 2px solid var(--text-main); /* Thick black outline */
@@ -1989,64 +1997,239 @@ button#scrapeButton:disabled {
     width: 98%;
     margin: 10px auto;
     padding: 10px;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .page-container.graph-wrapper > .graph-wrapper {
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 12px;
+    box-sizing: border-box;
+    overflow: hidden;
+  }
+
+  .global-header-container {
+    align-items: stretch;
+    gap: 8px;
   }
 
   .tabs-header {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 6px;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .tabs-header .tab-btn {
+    display: inline-flex;
+    width: auto;
+    align-items: center;
+    justify-content: center;
     font-size: 0.85rem;
     padding: 10px 6px;
+    margin-bottom: 0;
+    white-space: normal;
+    line-height: 1.15;
   }
 
   .global-actions-right {
     gap: 6px;
+    flex: 0 0 auto;
+    margin-bottom: 0;
   }
 
   #saveGraphBtn {
-    font-size: 0.85rem;
-    padding: 8px 10px;
+    width: auto;
+    min-height: 38px;
+    margin-bottom: 0;
+    font-size: 0.78rem;
+    padding: 8px 9px;
+    white-space: normal;
+    line-height: 1.15;
+  }
+
+  .icon-action-btn,
+  .info-icon-btn,
+  .icon-tool-btn,
+  .close-btn,
+  .bucket-create-btn {
+    display: inline-flex;
+    width: auto;
+    margin-bottom: 0;
   }
 
   .custom-manipulation-buttons {
+    flex-direction: row;
     flex-wrap: wrap;
+    gap: 8px;
   }
 
   .custom-manipulation-buttons > button {
-    flex: 1 1 48%;
-    margin-right: 0;
+    flex: 1 1 145px;
+    width: auto;
+    margin-right: 0 !important;
+    margin-bottom: 0;
+    padding: 8px 10px;
+    font-size: 0.82rem;
+    line-height: 1.2;
+  }
+
+  .power-user-hint {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 7px 10px;
+    line-height: 1.35;
   }
 
   #courseNetwork {
     min-height: 58vh;
     height: 58vh;
+    width: calc(100% - 24px);
+    margin: 0 auto;
   }
 
   .optional-shelf {
     border-radius: 10px;
     padding: 8px;
+    width: 100%;
+    max-width: 100%;
   }
 
   .optional-course-list {
     max-height: 42vh;
   }
 
+  .optional-program-group > summary,
+  .optional-bucket > summary,
+  .optional-course-row {
+    min-width: 0;
+  }
+
+  .optional-program-group > summary,
+  .optional-bucket > summary {
+    align-items: center;
+  }
+
+  .program-title,
+  .bucket-title,
+  .optional-course-row span {
+    overflow-wrap: anywhere;
+  }
+
+  .node-inspector {
+    padding: 18px 14px 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.14);
+  }
+
+  .inspector-header h4 {
+    font-size: 1.05rem;
+  }
+
+  .inspector-offered {
+    margin-bottom: 18px;
+  }
+
+  .inspector-controls select {
+    min-height: 40px;
+    font-size: 0.95rem;
+  }
+
+  .sheet-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
   .sheet-tables-container {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    width: 100%;
+    min-width: 0;
   }
 
   .table-card {
     width: 100%;
+    max-width: 100%;
+    padding: 26px 12px 16px;
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-card h4 {
+    font-size: 1.05rem;
+    margin-bottom: 14px;
   }
 
   .styled-table {
-    min-width: 560px;
+    min-width: 0;
+    table-layout: auto;
+    font-size: 0.82rem;
+  }
+
+  .styled-table th,
+  .styled-table td {
+    padding: 8px 5px;
+    overflow-wrap: anywhere;
+  }
+
+  .req-input {
+    width: 48px;
+    padding: 5px 3px;
+  }
+
+  .transcript-card {
+    width: 100%;
+  }
+
+  .term-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .term-header h4 {
+    font-size: 1.05rem !important;
+  }
+
+  .transcript-table th:nth-child(2),
+  .transcript-table td:nth-child(2) {
+    width: auto;
+  }
+}
+
+@media (max-width: 430px) {
+  .global-header-container {
+    flex-direction: column;
+  }
+
+  .global-actions-right {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  #saveGraphBtn {
+    flex: 1 1 auto;
+  }
+
+  .custom-manipulation-buttons > button {
+    flex-basis: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .styled-table {
+    font-size: 0.78rem;
+  }
+
+  .styled-table th,
+  .styled-table td {
+    padding: 7px 4px;
   }
 }
 
@@ -2121,3 +2304,170 @@ button#scrapeButton:disabled {
 .optional-bucket > summary::-webkit-details-marker { display:none; }
 .optional-bucket > summary::before { content: "▸ "; color: var(--text-muted);}
 .optional-bucket[open] > summary::before { content: "▾ "; }
+
+@media (max-width: 768px) {
+  .optional-program-group > summary,
+  .optional-bucket > summary {
+    align-items: center;
+    gap: 6px;
+  }
+
+  .optional-bucket > summary {
+    font-size: 0.95rem;
+  }
+
+  .optional-bucket-actions {
+    gap: 2px;
+  }
+
+  .bucket-create-btn {
+    padding: 4px 6px;
+    font-size: 0.78rem;
+  }
+
+  .optional-course-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .optional-course-row span {
+    width: 100%;
+    line-height: 1.35;
+  }
+
+  .optional-course-row button {
+    align-self: flex-end;
+    width: auto;
+    min-width: 76px;
+    margin: 0;
+    padding: 5px 10px;
+    font-size: 0.78rem;
+    line-height: 1.2;
+  }
+
+  .global-actions-right {
+    width: auto;
+  }
+
+  #saveGraphBtn {
+    flex: 0 1 auto;
+    width: auto;
+    max-width: 96px;
+    min-height: 34px;
+    padding: 6px 8px;
+    font-size: 0.72rem;
+    line-height: 1.1;
+  }
+
+  .vis-network .vis-edit-mode {
+    max-width: calc(100% - 10px) !important;
+  }
+
+  .vis-network .vis-edit-mode .vis-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    width: auto !important;
+    height: 30px !important;
+    min-height: 30px !important;
+    margin: 0 !important;
+    padding: 0 10px 0 31px !important;
+    background-position: 8px center !important;
+    background-size: 15px 15px !important;
+    line-height: 1 !important;
+  }
+
+  .vis-network .vis-edit-mode .vis-button .vis-label {
+    font-size: 0.82rem !important;
+  }
+
+  .vis-network .vis-manipulation {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+    height: auto !important;
+    min-height: 38px !important;
+    max-height: 42px !important;
+    padding: 5px 8px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    white-space: nowrap !important;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .vis-network .vis-manipulation .vis-button {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: auto !important;
+    min-width: auto !important;
+    height: 27px !important;
+    min-height: 27px !important;
+    margin: 0 !important;
+    padding: 0 8px !important;
+    vertical-align: middle !important;
+    flex: 0 0 auto !important;
+  }
+
+  .vis-network .vis-manipulation .vis-button.vis-back {
+    padding-left: 26px !important;
+    background-position: 7px center !important;
+    background-size: 14px 14px !important;
+  }
+
+  .vis-network .vis-manipulation .vis-button .vis-label {
+    max-width: 92px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    font-size: 0.76rem !important;
+    line-height: 1 !important;
+  }
+
+  .vis-network .vis-manipulation .vis-separator {
+    height: 18px !important;
+    margin: 0 2px !important;
+    vertical-align: middle !important;
+    flex: 0 0 auto !important;
+  }
+}
+
+@media (max-width: 430px) {
+  #courseNetwork {
+    width: calc(100% - 32px);
+  }
+
+  .vis-network .vis-manipulation .vis-button {
+    padding: 0 7px !important;
+  }
+
+  .vis-network .vis-manipulation .vis-button .vis-label {
+    max-width: 78px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .global-actions-right {
+    display: grid;
+    grid-template-columns: 38px 38px 1fr;
+    justify-content: stretch;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .icon-action-btn {
+    width: 38px;
+    height: 38px;
+    margin: 0;
+  }
+
+  #saveGraphBtn {
+    width: 100%;
+    max-width: 96px;
+    justify-self: end;
+  }
+}
