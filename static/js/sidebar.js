@@ -17,6 +17,16 @@ export function setupSidebar(
   const inspector = document.getElementById("nodeInspector");
   if (!inspector) return;
   let currentlySelectedNodeId = null;
+  let positionFrame = null;
+
+  function scheduleInspectorPosition() {
+    if (!inspector.classList.contains("open")) return;
+    if (positionFrame) cancelAnimationFrame(positionFrame);
+    positionFrame = requestAnimationFrame(() => {
+      positionFrame = null;
+      positionInspectorOverCoursePool();
+    });
+  }
 
   function positionInspectorOverCoursePool() {
     const graphContent = document.getElementById("graph-content");
@@ -74,6 +84,7 @@ export function setupSidebar(
 
     positionInspectorOverCoursePool();
     inspector.classList.add("open");
+    scheduleInspectorPosition();
   }
 
   window.openCourseInspector = openCourseInspector;
@@ -125,8 +136,18 @@ export function setupSidebar(
     .addEventListener("click", () => inspector.classList.remove("open"));
 
   window.addEventListener("resize", () => {
-    if (inspector.classList.contains("open")) positionInspectorOverCoursePool();
+    scheduleInspectorPosition();
   });
+  window.addEventListener("scroll", scheduleInspectorPosition, { passive: true });
+  window.addEventListener("degreeviz:data-updated", scheduleInspectorPosition);
+
+  if ("ResizeObserver" in window) {
+    const coursePool = document.getElementById("optionalCourseShelf");
+    const graphContent = document.getElementById("graph-content");
+    const inspectorObserver = new ResizeObserver(scheduleInspectorPosition);
+    if (coursePool) inspectorObserver.observe(coursePool);
+    if (graphContent) inspectorObserver.observe(graphContent);
+  }
 
   // Handle Status Change -> Updates Color
   document
