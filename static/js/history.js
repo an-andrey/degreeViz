@@ -1,3 +1,11 @@
+/*
+ * history.js
+ * Provides lightweight undo/redo for the vis-network DataSets.
+ *
+ * It snapshots visible nodes, visible edges, and current node positions.
+ * It does not snapshot every plain-object field in `detailsData`, so sidebar
+ * edits like status/grade/category still rely on their own dirty/save flow.
+ */
 export function setupHistory(network, nodes, edges, markGraphDirty) {
   let undoStack = [];
   let redoStack = [];

@@ -1,17 +1,93 @@
-import { generateNodeLabel, getStatusColor } from "./node_utils.js";
-import { updateSheetView } from "./sheet_view.js";
-import { updateGpaTracker } from "./gpa_tracker.js";
+/*
+ * sidebar.js
+ * Drives the right-side course inspector on the graph page.
+ *
+ * Selecting a node copies its data from `detailsData` into form controls.
+ * Changing status, planned semester, category, or grade dispatches a
+ * `graphState.updateCourse` action so labels, derived views, dirty state, and
+ * session draft sync stay centralized.
+ */
 
 export function setupSidebar(
   network,
   nodes,
-  detailsData,
-  markGraphDirty,
+  graphState,
   performWithoutHistory,
 ) {
   const inspector = document.getElementById("nodeInspector");
   if (!inspector) return;
   let currentlySelectedNodeId = null;
+  let positionFrame = null;
+
+  function scheduleInspectorPosition() {
+    if (!inspector.classList.contains("open")) return;
+    if (positionFrame) cancelAnimationFrame(positionFrame);
+    positionFrame = requestAnimationFrame(() => {
+      positionFrame = null;
+      positionInspectorOverCoursePool();
+    });
+  }
+
+  function positionInspectorOverCoursePool() {
+    const graphContent = document.getElementById("graph-content");
+    const coursePool = document.getElementById("optionalCourseShelf");
+    if (!graphContent || !coursePool) return;
+
+    const contentRect = graphContent.getBoundingClientRect();
+    const poolRect = coursePool.getBoundingClientRect();
+    inspector.style.top = `${Math.max(0, poolRect.top - contentRect.top)}px`;
+    inspector.style.left = `${Math.max(0, poolRect.left - contentRect.left)}px`;
+    inspector.style.width = `${poolRect.width}px`;
+    inspector.style.height = `${poolRect.height}px`;
+  }
+
+  function openCourseInspector(courseId) {
+    currentlySelectedNodeId = courseId;
+    const nodeData = graphState.details[courseId];
+    if (!nodeData) return;
+
+    document.getElementById("inspectorCode").textContent =
+      nodeData.code || courseId || "Unknown Code";
+    document.getElementById("inspectorTitle").textContent =
+      nodeData.title || "Unknown Title";
+    document.getElementById("inspectorCredits").textContent =
+      `${nodeData.credits || 3} Credits`;
+
+    const catEl = document.getElementById("inspectorCategory");
+    if (catEl.tagName === "SELECT") catEl.value = nodeData.category || "CORE";
+    else catEl.textContent = nodeData.category || "CORE";
+
+    document.getElementById("inspectorOffered").textContent =
+      nodeData.semesters_offered || "Unknown";
+    document.getElementById("inspectorStatus").value =
+      nodeData.status || "Unassigned";
+
+    const gradeContainer = document.getElementById("inspectorGradeContainer");
+    const gradeSelect = document.getElementById("inspectorGrade");
+    if (nodeData.status === "DONE") {
+      gradeContainer.style.display = "block";
+      gradeSelect.value = nodeData.grade || "";
+    } else {
+      gradeContainer.style.display = "none";
+      gradeSelect.value = "";
+    }
+
+    const planned = nodeData.planned_semester || "Unassigned";
+    if (planned === "Unassigned") {
+      document.getElementById("inspectorTermSeason").value = "Unassigned";
+    } else {
+      const parts = planned.split(" ");
+      document.getElementById("inspectorTermSeason").value = parts[0] || "Fall";
+      document.getElementById("inspectorTermYear").value =
+        parts[1] || new Date().getFullYear();
+    }
+
+    positionInspectorOverCoursePool();
+    inspector.classList.add("open");
+    scheduleInspectorPosition();
+  }
+
+  window.openCourseInspector = openCourseInspector;
 
   // Populate Dropdowns
   const select = document.getElementById("inspectorTerm");
@@ -48,48 +124,7 @@ export function setupSidebar(
   // Graph Clicks
   network.on("selectNode", function (params) {
     const nodeId = params.nodes[0];
-    currentlySelectedNodeId = nodeId;
-    const nodeData = detailsData[nodeId];
-
-    if (nodeData) {
-      document.getElementById("inspectorCode").textContent =
-        nodeId || "Unknown Code";
-      document.getElementById("inspectorTitle").textContent =
-        nodeData.title || "Unknown Title";
-      document.getElementById("inspectorCredits").textContent =
-        `${nodeData.credits || 3} Credits`;
-
-      const catEl = document.getElementById("inspectorCategory");
-      if (catEl.tagName === "SELECT") catEl.value = nodeData.category || "CORE";
-      else catEl.textContent = nodeData.category || "CORE";
-
-      document.getElementById("inspectorOffered").textContent =
-        nodeData.semesters_offered || "Unknown";
-      document.getElementById("inspectorStatus").value =
-        nodeData.status || "Unassigned";
-
-      const gradeContainer = document.getElementById("inspectorGradeContainer");
-      const gradeSelect = document.getElementById("inspectorGrade");
-      if (nodeData.status === "DONE") {
-        gradeContainer.style.display = "block";
-        gradeSelect.value = nodeData.grade || "";
-      } else {
-        gradeContainer.style.display = "none";
-        gradeSelect.value = "";
-      }
-
-      const planned = nodeData.planned_semester || "Unassigned";
-      if (planned === "Unassigned") {
-        document.getElementById("inspectorTermSeason").value = "Unassigned";
-      } else {
-        const parts = planned.split(" ");
-        document.getElementById("inspectorTermSeason").value =
-          parts[0] || "Fall";
-        document.getElementById("inspectorTermYear").value =
-          parts[1] || new Date().getFullYear();
-      }
-      inspector.classList.add("open");
-    }
+    openCourseInspector(nodeId);
   });
 
   network.on("deselectNode", () => {
@@ -100,80 +135,52 @@ export function setupSidebar(
     .getElementById("closeInspector")
     .addEventListener("click", () => inspector.classList.remove("open"));
 
-  // Sidebar Updates
-  function triggerDataSync() {
-    markGraphDirty();
-    updateSheetView(detailsData);
-    updateGpaTracker(detailsData);
+  window.addEventListener("resize", () => {
+    scheduleInspectorPosition();
+  });
+  window.addEventListener("scroll", scheduleInspectorPosition, { passive: true });
+  window.addEventListener("degreeviz:data-updated", scheduleInspectorPosition);
+
+  if ("ResizeObserver" in window) {
+    const coursePool = document.getElementById("optionalCourseShelf");
+    const graphContent = document.getElementById("graph-content");
+    const inspectorObserver = new ResizeObserver(scheduleInspectorPosition);
+    if (coursePool) inspectorObserver.observe(coursePool);
+    if (graphContent) inspectorObserver.observe(graphContent);
   }
 
   // Handle Status Change -> Updates Color
   document
     .getElementById("inspectorStatus")
     .addEventListener("change", function (e) {
-      if (currentlySelectedNodeId && detailsData[currentlySelectedNodeId]) {
-        const nData = detailsData[currentlySelectedNodeId];
-        nData.status = e.target.value;
+      if (currentlySelectedNodeId && graphState.details[currentlySelectedNodeId]) {
+        const nData = graphState.details[currentlySelectedNodeId];
+        const patch = { status: e.target.value };
 
         const gradeContainer = document.getElementById(
           "inspectorGradeContainer",
         );
-        if (nData.status === "DONE") {
+        if (patch.status === "DONE") {
           gradeContainer.style.display = "block";
         } else {
           gradeContainer.style.display = "none";
-          nData.grade = null; // Wipe out the grade if they un-mark it as DONE
+          patch.grade = null;
           document.getElementById("inspectorGrade").value = "";
         }
 
-        performWithoutHistory(() => {
-          nodes.update({
-            id: currentlySelectedNodeId,
-            color: getStatusColor(nData.status),
-          });
-        });
-
-        const newLabel = generateNodeLabel(
-          nData.code || currentlySelectedNodeId,
-          nData.title,
-          nData.credits,
-          nData.semesters_offered,
-          nData.category,
-          nData.planned_semester,
-          nData.status,
-        );
-        performWithoutHistory(() => {
-          nodes.update({ id: currentlySelectedNodeId, label: newLabel });
-        });
-        triggerDataSync();
+        graphState.updateCourse(currentlySelectedNodeId, patch);
       }
     });
 
   // Handle Term Change -> Updates Label
   function updatePlannedTerm() {
-    if (!currentlySelectedNodeId || !detailsData[currentlySelectedNodeId])
+    if (!currentlySelectedNodeId || !graphState.details[currentlySelectedNodeId])
       return;
     const season = document.getElementById("inspectorTermSeason").value;
     const year = document.getElementById("inspectorTermYear").value;
-    const nData = detailsData[currentlySelectedNodeId];
-
-    nData.planned_semester =
-      season === "Unassigned" ? "Unassigned" : `${season} ${year}`;
-
-    // Instantly update the label to show the new "Planned" semester!
-    const newLabel = generateNodeLabel(
-      nData.code || currentlySelectedNodeId,
-      nData.title,
-      nData.credits,
-      nData.semesters_offered,
-      nData.category,
-      nData.planned_semester,
-      nData.status,
-    );
-    performWithoutHistory(() => {
-      nodes.update({ id: currentlySelectedNodeId, label: newLabel });
+    graphState.updateCourse(currentlySelectedNodeId, {
+      planned_semester: season === "Unassigned" ? "Unassigned" : `${season} ${year}`,
     });
-    triggerDataSync();
   }
 
   document
@@ -186,25 +193,8 @@ export function setupSidebar(
   const categorySelect = document.getElementById("inspectorCategory");
   if (categorySelect && categorySelect.tagName === "SELECT") {
     categorySelect.addEventListener("change", function (e) {
-      if (currentlySelectedNodeId && detailsData[currentlySelectedNodeId]) {
-        const nData = detailsData[currentlySelectedNodeId];
-        nData.category = e.target.value;
-
-        // Uses the centralized label generator
-        const newLabel = generateNodeLabel(
-          nData.code || "Unknown Code",
-          nData.title,
-          nData.credits,
-          nData.semesters_offered,
-          nData.category,
-          nData.planned_semester,
-          nData.status,
-        );
-
-        performWithoutHistory(() => {
-          nodes.update({ id: currentlySelectedNodeId, label: newLabel });
-        });
-        triggerDataSync();
+      if (currentlySelectedNodeId && graphState.details[currentlySelectedNodeId]) {
+        graphState.updateCourse(currentlySelectedNodeId, { category: e.target.value });
       }
     });
   }
@@ -212,10 +202,8 @@ export function setupSidebar(
   const inspectorGrade = document.getElementById("inspectorGrade");
   if (inspectorGrade) {
     inspectorGrade.addEventListener("change", function (e) {
-      if (currentlySelectedNodeId && detailsData[currentlySelectedNodeId]) {
-        detailsData[currentlySelectedNodeId].grade = e.target.value;
-        markGraphDirty();
-        updateGpaTracker(detailsData); // Updates the transcript instantly
+      if (currentlySelectedNodeId && graphState.details[currentlySelectedNodeId]) {
+        graphState.updateCourse(currentlySelectedNodeId, { grade: e.target.value });
       }
     });
   }

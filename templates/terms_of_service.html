@@ -5,24 +5,14 @@ endblock %} {% block content %}
   document.querySelector("main").className = "landing-container";
 </script>
 
-<div class="landing-cards" style="margin-top: 20px">
-  <div
-    class="form-card single-card"
-    style="max-width: 800px; margin: 0 auto; text-align: left"
-  >
-    <h2
-      style="
-        text-align: center;
-        margin-bottom: 30px;
-        border-bottom: 2px solid var(--border-color);
-        padding-bottom: 15px;
-      "
-    >
+<div class="landing-cards legal-page">
+  <div class="form-card single-card legal-card">
+    <h2 class="legal-title">
       Terms of Service & Privacy Policy
     </h2>
 
     <h3>1. Acceptance of Terms</h3>
-    <p style="color: var(--text-muted); margin-bottom: 25px">
+    <p class="legal-copy">
       By accessing and using DegreeViz, you accept and agree to be bound by the
       terms and provision of this agreement. DegreeViz is an independent
       student-made tool and is not officially affiliated with or endorsed by
@@ -30,12 +20,12 @@ endblock %} {% block content %}
     </p>
 
     <h3>2. Google Account Data and Privacy</h3>
-    <p style="color: var(--text-muted); margin-bottom: 10px">
+    <p class="legal-copy compact">
       DegreeViz allows users to sign in using their Google accounts. If you
       choose to log in via Google, we request access to your basic profile
       information (specifically, your email address).
     </p>
-    <ul style="color: var(--text-muted); margin-bottom: 25px; line-height: 1.6">
+    <ul class="legal-list">
       <li>
         <strong>What we collect:</strong> We solely collect the email address
         associated with your log-in to create a unique identifier for saving
@@ -43,7 +33,7 @@ endblock %} {% block content %}
       </li>
       <li>
         <strong>How we use it:</strong> Your email is used exclusively for
-        authentication purposes and to link your saved course graphs to your
+        authentication purposes and to link your saved degree plans to your
         specific account.
       </li>
       <li>
@@ -53,15 +43,15 @@ endblock %} {% block content %}
     </ul>
 
     <h3>3. Data Storage</h3>
-    <p style="color: var(--text-muted); margin-bottom: 25px">
+    <p class="legal-copy">
       DegreeViz stores the course graphs you create (including course codes,
       credits, and layout positions) in our secure database so you can access
-      them later. You can delete your saved graphs at any time from your
+      them later. You can delete your saved plans at any time from your
       dashboard, which permanently removes them from our servers.
     </p>
 
     <h3>4. Disclaimer of Warranties</h3>
-    <p style="color: var(--text-muted); margin-bottom: 25px">
+    <p class="legal-copy">
       The information provided by DegreeViz is scraped from public university
       catalogues and is provided "as is". We make no guarantees regarding the
       accuracy, completeness, or currentness of the prerequisites or course
@@ -69,20 +59,9 @@ endblock %} {% block content %}
       academic advisor before making enrollment decisions.
     </p>
 
-    <div style="text-align: center; margin-top: 40px">
+    <div class="legal-actions">
       <a href="{{ url_for('scrape_form') }}">
-        <button
-          class="primary-btn"
-          style="
-            background-color: var(--mcgill-red);
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            font-size: 1em;
-            cursor: pointer;
-          "
-        >
+        <button class="primary-btn return-home-btn">
           Return to Home
         </button>
       </a>

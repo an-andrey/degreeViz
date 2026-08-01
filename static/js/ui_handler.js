@@ -1,3 +1,15 @@
+/*
+ * ui_handler.js
+ * Shared UI utilities for navigation, saving, and dynamic modals.
+ *
+ * The save flow asks `graphState` to capture current positions, then POSTs
+ * the full browser-owned graph to Flask/Supabase.
+ * `openCustomPrompt` is the generic modal builder used by graph editing,
+ * adding programs, saving new plans, and bucket/course management.
+ *
+ * Dirty-state is held in module state plus `sessionStorage`, so a reload
+ * during graph editing can still show that the plan needs saving.
+ */
 export function setupHomeLinkHandler() {
   const homeLink = document.getElementById("homeLink");
   if (homeLink && homeLink.dataset.url) {
@@ -6,48 +18,6 @@ export function setupHomeLinkHandler() {
     };
   } else if (homeLink) {
     console.warn("Home link URL not found in data-url attribute.");
-  }
-}
-
-export function setupExportButtonHandler(network, nodes, edges) {
-  const exportGraphBtn = document.getElementById("exportGraphBtn");
-  if (exportGraphBtn) {
-    exportGraphBtn.onclick = function () {
-      if (!network) {
-        console.error("Network not initialized for export.");
-        return;
-      }
-      network.storePositions();
-      const networkDataToExport = {
-        nodes: nodes.get({
-          fields: [
-            "id",
-            "label",
-            "color",
-            "shape",
-            "font",
-            "title",
-            "original_title",
-            "original_credits",
-            "original_semesters_offered",
-            "x",
-            "y",
-          ],
-        }),
-        edges: edges.get(),
-      };
-      const jsonData = JSON.stringify(networkDataToExport, null, 2);
-      const blob = new Blob([jsonData], { type: "application/json" });
-      const fileUrl = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = fileUrl;
-      a.download = "course_graph.json";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(fileUrl);
-      alert("Graph exported as course_graph.json!");
-    };
   }
 }
 
@@ -110,7 +80,7 @@ function updateSaveButtonUI() {
 }
 
 // --- SAVE GRAPH BUTTON HANDLER ---
-export function setupSaveButtonHandler(network, nodes, edges) {
+export function setupSaveButtonHandler(network, nodes, edges, graphState) {
   const saveGraphBtn = document.getElementById("saveGraphBtn");
   if (!saveGraphBtn) return;
 
@@ -163,17 +133,7 @@ export function setupSaveButtonHandler(network, nodes, edges) {
       saveGraphBtn.textContent = "Saving...";
       saveGraphBtn.disabled = true;
 
-      // FORCE vis-network to give the final x/y coordinates
-      network.storePositions();
-      const currentNodes = nodes.get();
-
-      //  Loop through and inject the coordinates into the global detailsData
-      currentNodes.forEach((node) => {
-        if (detailsData[node.id]) {
-          detailsData[node.id].x = node.x;
-          detailsData[node.id].y = node.y;
-        }
-      });
+      graphState.storeVisiblePositions();
 
       try {
         const response = await fetch("/save_graph_to_db", {
@@ -182,14 +142,10 @@ export function setupSaveButtonHandler(network, nodes, edges) {
           body: JSON.stringify({
             access_token: session.access_token,
             schedule_name: scheduleName,
-            details_data: detailsData,
-            prereqs_data: prereqsData,
-
-            credit_requirements: {
-              core: parseFloat(document.getElementById("req-core")?.value) || 0,
-              comp: parseFloat(document.getElementById("req-comp")?.value) || 0,
-              elec: parseFloat(document.getElementById("req-elec")?.value) || 0,
-            },
+            details_data: graphState.details,
+            prereqs_data: graphState.prereqs,
+            program_requirements: graphState.requirements,
+            credit_requirements: graphState.readCreditRequirements(),
           }),
         });
 

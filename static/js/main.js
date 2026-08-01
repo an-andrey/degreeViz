@@ -1,8 +1,21 @@
+/*
+ * main.js
+ * Entry point for the graph page. Flask injects `detailsData`,
+ * `prereqsData`, and `programRequirements` into `graph.html`; this module
+ * turns those plain objects into vis-network DataSets, wires every UI
+ * subsystem to the same in-memory objects, and sends broad
+ * `degreeviz:data-updated` events when secondary views should rerender.
+ *
+ * Important mental model:
+ * - `nodes` / `edges` are the visual graph state owned by vis-network.
+ * - `detailsData` / `prereqsData` are the saveable application state.
+ * - Most handlers must update both worlds, then mark the graph dirty.
+ */
 import { initializeNodes, initializeEdges } from "./data_init.js";
+import { createGraphState } from "./graph_state.js";
 import { getVisNetworkOptions } from "./network_options.js";
 import {
   setupHomeLinkHandler,
-  setupExportButtonHandler,
   initialLayoutAdjustment,
   setupSaveButtonHandler,
   markGraphDirty,
@@ -11,8 +24,14 @@ import { setupAddProgramButton } from "./program_handler.js";
 import { setupHistory } from "./history.js";
 import { setupSheetViewListeners, updateSheetView } from "./sheet_view.js";
 import { setupSidebar } from "./sidebar.js";
-import { generateNodeLabel, getStatusColor } from "./node_utils.js";
+import {
+  generateNodeLabel,
+  getCategoryShape,
+  getCategoryShapeProperties,
+  getStatusColor,
+} from "./node_utils.js";
 import { updateGpaTracker } from "./gpa_tracker.js";
+import { setupOptionalCoursesShelf } from "./optional_courses.js";
 
 document.addEventListener("DOMContentLoaded", function () {
   if (
@@ -23,16 +42,24 @@ document.addEventListener("DOMContentLoaded", function () {
     return;
   }
 
-  const nodes = initializeNodes(detailsData, prereqsData);
-  const edges = initializeEdges(prereqsData, nodes);
+  const graphState = createGraphState({
+    details: detailsData,
+    prereqs: prereqsData,
+    requirements: window.programRequirements || programRequirements || { buckets: [] },
+    markDirty: markGraphDirty,
+  });
+  window.graphState = graphState;
+
+  const nodes = initializeNodes(graphState.details, graphState.prereqs);
+  const edges = initializeEdges(graphState.prereqs, nodes);
   const container = document.getElementById("courseNetwork");
-  const options = getVisNetworkOptions(nodes, edges);
+  const options = getVisNetworkOptions(nodes, edges, graphState);
 
   //update node colours
   const formatUpdates = nodes
     .get()
     .map((n) => {
-      const d = detailsData[n.id];
+      const d = graphState.details[n.id];
       if (d) {
         return {
           id: n.id,
@@ -40,12 +67,11 @@ document.addEventListener("DOMContentLoaded", function () {
             d.code || n.id,
             d.title,
             d.credits,
-            d.semesters_offered,
-            d.category,
             d.planned_semester,
-            d.status,
           ),
           color: getStatusColor(d.status),
+          shape: getCategoryShape(d.category),
+          shapeProperties: getCategoryShapeProperties(d.category),
         };
       }
       return null;
@@ -73,10 +99,13 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Initialize UI & Tools
   setupHomeLinkHandler();
-  setupExportButtonHandler(network, nodes, edges);
-  setupSaveButtonHandler(network, nodes, edges);
+  setupSaveButtonHandler(network, nodes, edges, graphState);
   initialLayoutAdjustment(network, nodes);
-  setupSheetViewListeners(detailsData, updateSheetView, markGraphDirty);
+  setupSheetViewListeners(
+    graphState.details,
+    (details) => updateSheetView(details, graphState.requirements),
+    () => graphState.notify({ views: false }),
+  );
 
   // Initialize Complex Subsystems
   const { performWithoutHistory, saveGraphState } = setupHistory(
@@ -85,22 +114,71 @@ document.addEventListener("DOMContentLoaded", function () {
     edges,
     markGraphDirty,
   );
+  graphState.setNetworkContext({ network, nodes, edges, performWithoutHistory });
   setupSidebar(
     network,
     nodes,
-    detailsData,
-    markGraphDirty,
+    graphState,
     performWithoutHistory,
   );
   setupAddProgramButton(
     network,
     nodes,
     edges,
-    detailsData,
-    prereqsData,
+    graphState,
     saveGraphState,
-    markGraphDirty,
   );
+  setupOptionalCoursesShelf(network, nodes, edges, graphState);
+
+  const plannerInfoBtn = document.getElementById("plannerInfoBtn");
+  const plannerInfoPopover = document.getElementById("plannerInfoPopover");
+  if (plannerInfoBtn && plannerInfoPopover) {
+    const closePlannerInfo = () => {
+      plannerInfoPopover.hidden = true;
+      plannerInfoBtn.setAttribute("aria-expanded", "false");
+    };
+
+    plannerInfoBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const shouldOpen = plannerInfoPopover.hidden;
+      plannerInfoPopover.hidden = !shouldOpen;
+      plannerInfoBtn.setAttribute("aria-expanded", String(shouldOpen));
+    });
+
+    document.addEventListener("click", (event) => {
+      if (
+        !plannerInfoPopover.hidden &&
+        !plannerInfoPopover.contains(event.target) &&
+        !plannerInfoBtn.contains(event.target)
+      ) {
+        closePlannerInfo();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closePlannerInfo();
+    });
+  }
+
+  const openOptionalShelfBtn = document.getElementById("openOptionalShelfBtn");
+  const optionalShelf = document.getElementById("optionalCourseShelf");
+  const plannerLayout = document.querySelector(".planner-layout");
+  if (openOptionalShelfBtn && optionalShelf && plannerLayout) {
+    const closeBtn = document.createElement("button");
+    closeBtn.className = "secondary-btn";
+    closeBtn.textContent = "Hide";
+    closeBtn.onclick = () => {
+      plannerLayout.classList.add("shelf-hidden");
+      openOptionalShelfBtn.style.display = "inline-block";
+    };
+    const header = optionalShelf.querySelector(".optional-shelf-header");
+    if (header) header.appendChild(closeBtn);
+
+    openOptionalShelfBtn.addEventListener("click", () => {
+      plannerLayout.classList.remove("shelf-hidden");
+      openOptionalShelfBtn.style.display = "none";
+    });
+  }
 
   // Core Network Events
   network.on("click", function (params) {
@@ -120,14 +198,20 @@ document.addEventListener("DOMContentLoaded", function () {
         y: positions[id].y,
       }));
       performWithoutHistory(() => nodes.update(updates));
+      params.nodes.forEach((id) => {
+        if (graphState.details[id] && positions[id]) {
+          graphState.details[id].x = positions[id].x;
+          graphState.details[id].y = positions[id].y;
+        }
+      });
       saveGraphState();
-      markGraphDirty();
+      graphState.notify();
     }
   });
 
   // Initial Data Sync
   setTimeout(() => {
-    updateSheetView(detailsData);
-    updateGpaTracker(detailsData);
+    updateSheetView(graphState.details, graphState.requirements);
+    updateGpaTracker(graphState.details);
   }, 500);
 });

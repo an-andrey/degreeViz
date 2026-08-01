@@ -1,3 +1,10 @@
+/*
+ * saved_graphs.js
+ * Adds AJAX deletion to the saved plans page.
+ *
+ * The form still exists in HTML, but this handler prevents a full page reload,
+ * calls Flask `/delete_graph`, and removes the card from the grid on success.
+ */
 document.addEventListener("DOMContentLoaded", () => {
   // Select all the delete forms
   const deleteForms = document.querySelectorAll(".delete-form");
@@ -8,7 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const submitBtn = form.querySelector(".btn-delete");
       const scheduleId = form.querySelector('input[name="schedule_id"]').value;
-      const card = form.closest(".graph-card");
+      const card = form.closest(".saved-plan-card");
 
       // Instantly update UI to show action is happening
       submitBtn.textContent = "Deleting...";
@@ -31,7 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
           setTimeout(() => {
             card.remove();
             // If the grid is now empty, refresh to show the "empty state" message
-            const grid = document.querySelector(".graphs-grid");
+            const grid = document.querySelector(".saved-plans-grid");
             if (grid && grid.children.length === 0) {
               location.reload();
             }
