@@ -130,35 +130,47 @@ document.addEventListener("DOMContentLoaded", function () {
   );
   setupOptionalCoursesShelf(network, nodes, edges, graphState);
 
-  const plannerInfoBtn = document.getElementById("plannerInfoBtn");
-  const plannerInfoPopover = document.getElementById("plannerInfoPopover");
-  if (plannerInfoBtn && plannerInfoPopover) {
-    const closePlannerInfo = () => {
-      plannerInfoPopover.hidden = true;
-      plannerInfoBtn.setAttribute("aria-expanded", "false");
-    };
+  const infoPopovers = [
+    ["plannerInfoBtn", "plannerInfoPopover"],
+    ["creditInfoBtn", "creditInfoPopover"],
+    ["gpaInfoBtn", "gpaInfoPopover"],
+  ]
+    .map(([buttonId, popoverId]) => ({
+      button: document.getElementById(buttonId),
+      popover: document.getElementById(popoverId),
+    }))
+    .filter(({ button, popover }) => button && popover);
 
-    plannerInfoBtn.addEventListener("click", (event) => {
+  function closeInfoPopover({ button, popover }) {
+    popover.hidden = true;
+    button.setAttribute("aria-expanded", "false");
+  }
+
+  infoPopovers.forEach((target) => {
+    target.button.addEventListener("click", (event) => {
       event.stopPropagation();
-      const shouldOpen = plannerInfoPopover.hidden;
-      plannerInfoPopover.hidden = !shouldOpen;
-      plannerInfoBtn.setAttribute("aria-expanded", String(shouldOpen));
+      const shouldOpen = target.popover.hidden;
+      infoPopovers.forEach(closeInfoPopover);
+      target.popover.hidden = !shouldOpen;
+      target.button.setAttribute("aria-expanded", String(shouldOpen));
     });
+  });
 
-    document.addEventListener("click", (event) => {
+  document.addEventListener("click", (event) => {
+    infoPopovers.forEach((target) => {
       if (
-        !plannerInfoPopover.hidden &&
-        !plannerInfoPopover.contains(event.target) &&
-        !plannerInfoBtn.contains(event.target)
+        !target.popover.hidden &&
+        !target.popover.contains(event.target) &&
+        !target.button.contains(event.target)
       ) {
-        closePlannerInfo();
+        closeInfoPopover(target);
       }
     });
+  });
 
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closePlannerInfo();
-    });
-  }
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") infoPopovers.forEach(closeInfoPopover);
+  });
 
   const openOptionalShelfBtn = document.getElementById("openOptionalShelfBtn");
   const optionalShelf = document.getElementById("optionalCourseShelf");

@@ -35,10 +35,12 @@ export function setupSidebar(
 
     const contentRect = graphContent.getBoundingClientRect();
     const poolRect = coursePool.getBoundingClientRect();
-    inspector.style.top = `${Math.max(0, poolRect.top - contentRect.top)}px`;
-    inspector.style.left = `${Math.max(0, poolRect.left - contentRect.left)}px`;
-    inspector.style.width = `${poolRect.width}px`;
-    inspector.style.height = `${poolRect.height}px`;
+    const poolIsVisible = poolRect.width > 0 && poolRect.height > 0;
+    const targetRect = poolIsVisible ? poolRect : contentRect;
+    inspector.style.top = `${Math.max(0, targetRect.top - contentRect.top)}px`;
+    inspector.style.left = `${Math.max(0, targetRect.left - contentRect.left)}px`;
+    inspector.style.width = `${poolIsVisible ? poolRect.width : Math.min(contentRect.width, 380)}px`;
+    inspector.style.height = `${poolIsVisible ? poolRect.height : contentRect.height}px`;
   }
 
   function openCourseInspector(courseId) {
