@@ -148,9 +148,11 @@ def inject_supabase_config():
 def rebuild_requirements_from_details(details):
     """Recreate minimal requirement buckets from per-course metadata."""
     buckets = {}
+    fallback_courses = []
     for code, course in (details or {}).items():
         bucket_id = course.get("requirement_bucket")
         if not bucket_id:
+            fallback_courses.append(code)
             continue
         bucket = buckets.setdefault(bucket_id, {
             "id": bucket_id,
@@ -161,7 +163,30 @@ def rebuild_requirements_from_details(details):
             "courses": [],
         })
         bucket["courses"].append(code)
+    if not buckets and fallback_courses:
+        buckets["imported-saved-courses"] = {
+            "id": "imported-saved-courses",
+            "title": "Imported Saved Courses",
+            "category": "CORE",
+            "min_credits": 0,
+            "max_credits": None,
+            "courses": fallback_courses,
+            "additional_courses": [],
+        }
     return {"buckets": list(buckets.values())}
+
+
+def has_requirement_buckets(requirements):
+    """Return whether saved requirement metadata has visible course-pool buckets."""
+    return bool(isinstance(requirements, Mapping) and requirements.get("buckets"))
+
+
+def requirements_for_saved_graph(graph):
+    """Use saved requirement metadata, falling back for legacy saved plans."""
+    requirements = graph.get("program_requirements")
+    if has_requirement_buckets(requirements):
+        return requirements
+    return rebuild_requirements_from_details(graph.get("details_data", {}))
 
 
 def merge_program_requirements(current, incoming):
@@ -463,7 +488,7 @@ def load_graph():
             payload = validate_graph_payload({
                 "details_data": graph.get('details_data', {}),
                 "prereqs_data": graph.get('prereqs_data', {}),
-                "program_requirements": graph.get('program_requirements') or rebuild_requirements_from_details(graph.get('details_data', {})),
+                "program_requirements": requirements_for_saved_graph(graph),
                 "credit_requirements": graph.get('credit_requirements', {"core": 0, "comp": 0, "elec": 0}),
             })
             store_graph_in_session(payload)
